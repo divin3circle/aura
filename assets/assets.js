@@ -21,6 +21,8 @@ import profile_pic1 from "./profile_pic1.jpg";
 import profile_pic2 from "./profile_pic2.jpg";
 import profile_pic3 from "./profile_pic3.jpg";
 import hero1 from "./hero1.png";
+import hero2 from "./hero.png";
+import hero3 from "./hero3.png";
 
 export const hero_image = hero1;
 
@@ -43,6 +45,8 @@ export const assets = {
   product_img11,
   product_img12,
   hero_image,
+  hero2,
+  hero3,
 };
 
 export const categories = [
