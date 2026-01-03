@@ -50,7 +50,6 @@ export default function AdminDashboard() {
           Authorization: `Bearer ${token}`,
         },
       });
-      console.log("Dashboard data:", data);
       setDashboardData(data);
     } catch (error) {
       toast.error(`Failed to fetch dashboard data. ${error.message}`);

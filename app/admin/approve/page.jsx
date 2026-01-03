@@ -22,6 +22,7 @@ export default function AdminApprove() {
           Authorization: `Bearer ${token}`,
         },
       });
+      console.log("Stores data:", data);
       setStores(data);
     } catch (error) {
       toast.error(`Failed to fetch stores. ${error.message}`);
@@ -65,7 +66,7 @@ export default function AdminApprove() {
         Approve <span className="text-slate-800 font-medium">Stores</span>
       </h1>
 
-      {stores.length ? (
+      {stores.length >= 1 ? (
         <div className="flex flex-col gap-4 mt-4">
           {stores.map((store) => (
             <div
