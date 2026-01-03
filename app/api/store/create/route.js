@@ -82,7 +82,7 @@ export async function POST(request) {
         description: description,
         email: email,
         contact: contact,
-        image: optimizedImage,
+        logo: optimizedImage,
         address: address,
       },
     });
