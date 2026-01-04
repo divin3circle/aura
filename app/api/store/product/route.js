@@ -25,7 +25,7 @@ export async function POST(request) {
     const description = formData.get("description");
     const mrp = Number(formData.get("mrp"));
     const price = Number(formData.get("price"));
-    const images = formData.get("image");
+    const images = formData.getAll("images");
     const category = formData.get("category");
 
     if (
@@ -75,7 +75,11 @@ export async function POST(request) {
         storeId,
       },
     });
-    return NextResponse.json("Product created successfully", { status: 201 });
+    return NextResponse.json(
+      "Product created successfully",
+      { message: name + " added successfully" },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Error creating product:", error);
     return NextResponse.json(

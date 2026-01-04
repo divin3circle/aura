@@ -10,21 +10,20 @@ export async function GET(request) {
       return NextResponse.json("Unauthorized", { status: 401 });
     }
 
-    const isSeller = await authSeller(userId);
+    const storeId = await authSeller(userId);
 
-    if (!isSeller) {
+    if (!storeId) {
       return NextResponse.json(
-        "Forbidden",
-        { error: "Not authorized" },
-        { status: 403 }
+        { isSeller: false, store: null },
+        { status: 200 }
       );
     }
 
     const storeInfo = await prisma.store.findUnique({
-      where: { userId: userId },
+      where: { id: storeId },
     });
     return NextResponse.json({
-      isSeller,
+      isSeller: true,
       store: storeInfo,
     });
   } catch (error) {
