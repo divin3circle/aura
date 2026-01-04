@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuth } from "@clerk/nextjs/server";
 import authAdmin from "@/middlewares/authAdmin";
 import prisma from "@/lib/prisma";
+import { inngest } from "@/inngest/client";
 
 export async function POST(request) {
   try {
@@ -26,9 +27,20 @@ export async function POST(request) {
       );
     }
     coupon.code = coupon.code.toUpperCase();
-    await prisma.coupon.create({
-      data: coupon,
-    });
+    await prisma.coupon
+      .create({
+        data: coupon,
+      })
+      .then(async (coupon) => {
+        await inngest.send({
+          name: "app/coupon.expired",
+          data: {
+            code: coupon.code,
+            expires_at: coupon.expiresAt,
+          },
+        });
+      });
+
     return NextResponse.json(
       {
         message: `Coupon with code ${coupon.code} created successfully.`,
