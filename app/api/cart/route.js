@@ -48,7 +48,12 @@ export async function GET(request) {
       where: { id: userId },
     });
 
-    return NextResponse.json({ cart: userCart.cart }, { status: 200 });
+    const cart =
+      typeof userCart.cart === "object" && userCart.cart !== null
+        ? userCart.cart
+        : { cartItems: {}, total: 0 };
+
+    return NextResponse.json({ cart }, { status: 200 });
   } catch (error) {
     console.error("Error fetching cart:", error);
     return NextResponse.json(

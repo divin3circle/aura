@@ -33,7 +33,7 @@ export async function POST(request) {
     if (!userId) {
       return NextResponse.json("Unauthorized", { status: 401 });
     }
-    const address = await request.json();
+    const { address } = await request.json();
     if (!address) {
       return NextResponse.json(
         "Address data is required",
@@ -41,10 +41,12 @@ export async function POST(request) {
         { status: 400 }
       );
     }
-    address.userId = userId;
 
     const newAddress = await prisma.address.create({
-      data: address,
+      data: {
+        ...address,
+        userId,
+      },
     });
 
     return NextResponse.json(
