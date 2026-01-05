@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useSelector } from "react-redux";
-import { useUser, useClerk, UserButton } from "@clerk/nextjs";
+import { useUser, useClerk, UserButton, Protect } from "@clerk/nextjs";
 
 const Navbar = () => {
   const router = useRouter();
@@ -29,9 +29,11 @@ const Navbar = () => {
           >
             <span className="text-pink-500">aura</span>cart
             <span className="text-pink-500 text-5xl leading-0">.</span>
-            <p className="absolute text-xs font-semibold -top-1 -right-8 px-3 p-0.5 rounded-full flex items-center gap-2 text-white bg-pink-500">
-              plus
-            </p>
+            <Protect plan="plus">
+              <p className="absolute text-xs font-semibold -top-1 -right-8 px-3 p-0.5 rounded-full flex items-center gap-2 text-white bg-pink-500">
+                plus
+              </p>
+            </Protect>
           </Link>
 
           {/* Desktop Menu */}

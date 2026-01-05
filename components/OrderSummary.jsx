@@ -4,6 +4,7 @@ import AddressModal from "./AddressModal";
 import { useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import { Protect } from "@clerk/nextjs";
 
 const OrderSummary = ({ totalPrice, items }) => {
   const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || "$";
@@ -110,7 +111,13 @@ const OrderSummary = ({ totalPrice, items }) => {
               {currency}
               {totalPrice.toLocaleString()}
             </p>
-            <p>Free</p>
+            <div className="font-semibold text-sm text-slate-500">
+              <p className="">
+                <Protect plan="plus" fallback={`${currency}5.36`}>
+                  Free
+                </Protect>
+              </p>
+            </div>
             {coupon && (
               <p>{`-${currency}${((coupon.discount / 100) * totalPrice).toFixed(
                 2
@@ -132,9 +139,9 @@ const OrderSummary = ({ totalPrice, items }) => {
               value={couponCodeInput}
               type="text"
               placeholder="Coupon Code"
-              className="border border-slate-400 p-1.5 rounded w-full outline-none"
+              className="border border-slate-400 p-1.5 rounded-xl w-full outline-none"
             />
-            <button className="bg-slate-600 text-white px-3 rounded hover:bg-slate-800 active:scale-95 transition-all">
+            <button className="bg-slate-600 text-white px-3 rounded-xl hover:bg-slate-800 active:scale-95 transition-all">
               Apply
             </button>
           </form>
@@ -158,10 +165,25 @@ const OrderSummary = ({ totalPrice, items }) => {
       <div className="flex justify-between py-4">
         <p>Total:</p>
         <p className="font-medium text-right">
-          {currency}
-          {coupon
-            ? (totalPrice - (coupon.discount / 100) * totalPrice).toFixed(2)
-            : totalPrice.toLocaleString()}
+          <Protect
+            plan="plus"
+            fallback={`${currency}${
+              coupon
+                ? (
+                    totalPrice +
+                    5.36 -
+                    (coupon.discount / 100) * totalPrice
+                  ).toFixed(2)
+                : (totalPrice + 5.36).toLocaleString()
+            }`}
+          >
+            {currency}
+            {coupon
+              ? (totalPrice + 0 - (coupon.discount / 100) * totalPrice).toFixed(
+                  2
+                )
+              : totalPrice.toLocaleString()}
+          </Protect>
         </p>
       </div>
       <button
