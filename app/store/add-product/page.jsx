@@ -5,26 +5,26 @@ import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@clerk/nextjs";
 import axios from "axios";
-import { set } from "date-fns/set";
 import { Loader2 } from "lucide-react";
+
+export const categories = [
+  "Skincare",
+  "Makeup",
+  "Haircare",
+  "Fragrances",
+  "Hygiene",
+  "Bath",
+  "Nails",
+  "Accessories",
+  "Grooming",
+  "Sunscreen",
+  "Wellness",
+  "Supplements",
+  "Others",
+];
 
 export default function StoreAddProduct() {
   const { getToken } = useAuth();
-  const categories = [
-    "Skincare",
-    "Makeup",
-    "Haircare",
-    "Fragrances",
-    "Personal Hygiene",
-    "Bath & Body",
-    "Nail Care",
-    "Tools & Accessories",
-    "Men's Grooming",
-    "Sun Care",
-    "Wellness",
-    "Beauty Supplements",
-    "Others",
-  ];
 
   const [images, setImages] = useState({ 1: null, 2: null, 3: null, 4: null });
   const [productInfo, setProductInfo] = useState({
