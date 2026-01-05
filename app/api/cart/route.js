@@ -18,7 +18,7 @@ export async function POST(request) {
       );
     }
 
-    await prisma.cart.update({
+    await prisma.user.update({
       where: { id: userId },
       data: { cart: cart },
     });
