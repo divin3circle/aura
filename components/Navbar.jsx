@@ -92,16 +92,17 @@ const Navbar = () => {
           {/* Mobile User Button  */}
           <div className="sm:hidden">
             {user ? (
-              <div>
-                <UserButton>
-                  <UserButton.MenuItems>
-                    <UserButton.Action
-                      labelIcon={<ShoppingCart size={16} />}
-                      label="Cart"
-                      onClick={() => router.push("/cart")}
-                    />
-                  </UserButton.MenuItems>
-                </UserButton>
+              <div className="flex items-center gap-4">
+                <Link
+                  href="/cart"
+                  className="relative flex items-center gap-2 text-slate-600"
+                >
+                  <ShoppingCart size={22} />
+
+                  <button className="absolute -top-1 left-3 text-[8px] text-white bg-slate-600 size-3.5 rounded-full">
+                    {cartCount}
+                  </button>
+                </Link>
                 <UserButton>
                   <UserButton.MenuItems>
                     <UserButton.Action
