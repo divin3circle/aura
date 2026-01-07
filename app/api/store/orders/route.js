@@ -6,12 +6,12 @@ import prisma from "@/lib/prisma";
 
 export async function GET(request) {
   try {
-    const { user } = getAuth(request);
-    if (!user) {
+    const { userId } = getAuth(request);
+    if (!userId) {
       return NextResponse.json("Unauthorized", { status: 401 });
     }
 
-    const storeId = await authSeller(user.id);
+    const storeId = await authSeller(userId);
     if (!storeId) {
       return NextResponse.json(
         "Forbidden",
