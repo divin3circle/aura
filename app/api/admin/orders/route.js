@@ -35,8 +35,8 @@ export async function GET(request) {
 
 export async function PATCH(request) {
   try {
-    const { user } = getAuth(request);
-    if (!user) {
+    const { userId } = getAuth(request);
+    if (!userId) {
       return NextResponse.json("Unauthorized", { status: 401 });
     }
 
