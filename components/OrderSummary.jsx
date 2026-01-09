@@ -19,7 +19,7 @@ const OrderSummary = ({ totalPrice, items }) => {
 
   const addressList = useSelector((state) => state.address.list);
 
-  const [paymentMethod, setPaymentMethod] = useState("COD");
+  const [paymentMethod, setPaymentMethod] = useState("STRIPE");
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [couponCodeInput, setCouponCodeInput] = useState("");
@@ -61,6 +61,8 @@ const OrderSummary = ({ totalPrice, items }) => {
       if (!selectedAddress) {
         return toast("Please select an address", { icon: "⚠️" });
       }
+      if (paymentMethod !== "STRIPE")
+        return toast.error("Only Stripe payment is available currently");
       const token = await getToken();
       const orderData = {
         addressId: selectedAddress.id,
@@ -245,7 +247,7 @@ const OrderSummary = ({ totalPrice, items }) => {
       </div>
       <button
         onClick={(e) =>
-          toast.promise(handlePlaceOrder(e), { loading: "placing Order..." })
+          toast.promise(handlePlaceOrder(e), { loading: "Placing Order..." })
         }
         className="w-full bg-slate-700 text-white py-2.5 rounded hover:bg-slate-900 active:scale-95 transition-all"
       >
