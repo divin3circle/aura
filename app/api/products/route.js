@@ -28,7 +28,6 @@ export async function GET(request) {
     products = products.filter((product) => {
       return product.store.isActive;
     });
-    console.log("Fetched products:", products.length);
     return NextResponse.json({ products }, { status: 200 });
   } catch (error) {
     console.error("Error fetching products:", error);
