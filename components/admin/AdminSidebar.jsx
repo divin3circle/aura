@@ -6,6 +6,7 @@ import {
   ShieldCheckIcon,
   StoreIcon,
   TicketPercentIcon,
+  LayoutListIcon,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -21,6 +22,7 @@ const AdminSidebar = () => {
     { name: "Stores", href: "/admin/stores", icon: StoreIcon },
     { name: "Approve Store", href: "/admin/approve", icon: ShieldCheckIcon },
     { name: "Coupons", href: "/admin/coupons", icon: TicketPercentIcon },
+    { name: "Orders", href: "/admin/orders", icon: LayoutListIcon },
   ];
 
   return (

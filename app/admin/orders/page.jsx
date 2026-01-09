@@ -15,7 +15,7 @@ export default function StoreOrders() {
   const fetchOrders = async () => {
     try {
       const token = await getToken();
-      const { data } = await axios.get("/api/store/orders", {
+      const { data } = await axios.get("/api/admin/orders", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -36,7 +36,7 @@ export default function StoreOrders() {
     try {
       const token = await getToken();
       const { data } = await axios.patch(
-        "/api/store/update-status",
+        "/api/admin/orders",
         {
           orderId,
           status,

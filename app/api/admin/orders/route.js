@@ -1,4 +1,3 @@
-import authSeller from "@/middlewares/authSeller";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
@@ -10,17 +9,9 @@ export async function GET(request) {
       return NextResponse.json("Unauthorized", { status: 401 });
     }
 
-    const storeId = await authSeller(userId);
-    if (!storeId) {
-      return NextResponse.json(
-        "Forbidden",
-        { error: "Not authorized" },
-        { status: 403 }
-      );
-    }
-
+    // for admin fetch all shipped orders
     const orders = await prisma.order.findMany({
-      where: { storeId: storeId },
+      where: { status: "SHIPPED" },
       orderBy: { createdAt: "desc" },
       include: {
         user: true,
@@ -42,20 +33,11 @@ export async function GET(request) {
   }
 }
 
-export async function POST(request) {
+export async function PATCH(request) {
   try {
     const { user } = getAuth(request);
     if (!user) {
       return NextResponse.json("Unauthorized", { status: 401 });
-    }
-
-    const storeId = await authSeller(user.id);
-    if (!storeId) {
-      return NextResponse.json(
-        "Forbidden",
-        { error: "Not authorized" },
-        { status: 403 }
-      );
     }
 
     const { orderId, status } = await request.json();
@@ -68,7 +50,7 @@ export async function POST(request) {
       );
     }
     await prisma.order.update({
-      where: { id: orderId, storeId: storeId },
+      where: { id: orderId },
       data: { status: status },
     });
     return NextResponse.json(
