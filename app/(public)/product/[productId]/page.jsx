@@ -22,8 +22,6 @@ export default function Product() {
     scrollTo(0, 0);
   }, [productId, products]);
 
-  console.log("Product data:", product);
-
   return (
     <div className="mx-6">
       <div className="max-w-7xl mx-auto">

@@ -42,7 +42,6 @@ const OrderSummary = ({ totalPrice, items }) => {
         }
       );
       toast(data.message || "Coupon applied successfully");
-      console.log("Coupon data:", data);
       setCoupon(data.coupon);
       setCouponCodeInput("");
     } catch (error) {

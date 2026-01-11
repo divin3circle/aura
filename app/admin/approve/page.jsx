@@ -22,7 +22,6 @@ export default function AdminApprove() {
           Authorization: `Bearer ${token}`,
         },
       });
-      console.log("Stores data:", data);
       setStores(data);
     } catch (error) {
       toast.error(`Failed to fetch stores. ${error.message}`);

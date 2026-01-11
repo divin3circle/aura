@@ -35,9 +35,61 @@ export default function StoreAddProduct() {
     category: "",
   });
   const [loading, setLoading] = useState(false);
+  const [aiUsed, setAiUsed] = useState(false);
 
   const onChangeHandler = (e) => {
     setProductInfo({ ...productInfo, [e.target.name]: e.target.value });
+  };
+
+  const handleImageUpload = async (key, file) => {
+    setImages((prev) => ({ ...prev, [key]: file }));
+
+    if (key === "1" && file && !aiUsed) {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onloadend = async () => {
+        try {
+          const base64String = reader.result.split(",")[1];
+          const mimeType = file.type;
+          const token = await getToken();
+
+          await toast.promise(
+            axios.post(
+              "/api/store/ai",
+              {
+                image: base64String,
+                mimeType: mimeType,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            ),
+            {
+              loading: "Analyzing image for product details...",
+              success: (res) => {
+                const data = res.data;
+                if (data.name && data.description) {
+                  setProductInfo((prev) => ({
+                    ...prev,
+                    name: data.name,
+                    description: data.description,
+                  }));
+                  setAiUsed(true);
+                  return "Product details generated successfully!";
+                }
+                return "Could not generate product details.";
+              },
+              error: "Failed to analyze image for product details.",
+            }
+          );
+        } catch (error) {
+          console.error("AI image analysis failed:", error);
+          toast.error("Failed to analyze image for product details.");
+        }
+      };
+    }
   };
 
   const onSubmitHandler = async (e) => {
@@ -115,9 +167,7 @@ export default function StoreAddProduct() {
               type="file"
               accept="image/*"
               id={`images${key}`}
-              onChange={(e) =>
-                setImages({ ...images, [key]: e.target.files[0] })
-              }
+              onChange={(e) => handleImageUpload(key, e.target.files[0])}
               hidden
             />
           </label>

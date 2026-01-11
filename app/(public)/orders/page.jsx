@@ -17,7 +17,6 @@ export default function Orders() {
 
   useEffect(() => {
     const fetchOrders = async () => {
-      console.log("Fetching orders...");
       try {
         const token = await getToken();
         const { data } = await axios.get("/api/orders", {
@@ -25,7 +24,6 @@ export default function Orders() {
             Authorization: `Bearer ${token}`,
           },
         });
-        console.log("Orders fetched:", data);
         setOrders(data.orders);
         setLoading(false);
       } catch (error) {
