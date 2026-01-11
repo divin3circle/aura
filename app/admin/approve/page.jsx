@@ -70,7 +70,7 @@ export default function AdminApprove() {
           {stores.map((store) => (
             <div
               key={store.id}
-              className="bg-white border rounded-2xl shadow-xs p-6 flex max-md:flex-col gap-4 md:items-end max-w-4xl"
+              className="bg-white border rounded-2xl   p-6 flex max-md:flex-col gap-4 md:items-end max-w-4xl"
             >
               {/* Store Info */}
               <StoreInfo store={store} />

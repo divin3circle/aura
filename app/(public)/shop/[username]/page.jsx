@@ -34,7 +34,7 @@ export default function StoreShop() {
     <div className="min-h-[70vh] mx-6">
       {/* Store Info Banner */}
       {storeInfo && (
-        <div className="max-w-7xl mx-auto bg-slate-50 rounded-xl p-6 md:p-10 mt-6 flex flex-col md:flex-row items-center gap-6 shadow-xs">
+        <div className="max-w-7xl mx-auto bg-slate-50 rounded-xl p-6 md:p-10 mt-6 flex flex-col md:flex-row items-center gap-6  ">
           <Image
             src={storeInfo.logo}
             alt={storeInfo.name}

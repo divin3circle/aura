@@ -5,6 +5,7 @@ import Loading from "@/components/Loading";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import axios from "axios";
+import Link from "next/link";
 
 export default function AdminStores() {
   const { user } = useUser();
@@ -68,12 +69,10 @@ export default function AdminStores() {
           {stores.map((store) => (
             <div
               key={store.id}
-              className="bg-white border border-slate-200 rounded-2xl shadow-xs p-6 flex max-md:flex-col gap-4 md:items-end max-w-4xl"
+              className="bg-white border border-slate-200 rounded-2xl   p-6 flex max-md:flex-col gap-4 md:items-end max-w-4xl"
             >
-              {/* Store Info */}
               <StoreInfo store={store} />
 
-              {/* Actions */}
               <div className="flex items-center gap-3 pt-2 flex-wrap">
                 <p>Active</p>
                 <label className="relative inline-flex items-center cursor-pointer text-gray-900">
@@ -90,6 +89,12 @@ export default function AdminStores() {
                   <div className="w-9 h-5 bg-slate-300 rounded-full peer peer-checked:bg-green-600 transition-colors duration-200"></div>
                   <span className="dot absolute left-1 top-1 w-3 h-3 bg-white rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-4"></span>
                 </label>
+                <Link
+                  href={`/admin/stores/${store.id}`}
+                  className="text-slate-600 hover:text-blue-800 underline underline-offset-2"
+                >
+                  View more
+                </Link>
               </div>
             </div>
           ))}

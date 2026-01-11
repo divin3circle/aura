@@ -25,11 +25,15 @@ export async function GET(request) {
       select: {
         id: true,
         total: true,
+        isPaid: true,
         createdAt: true,
       },
     });
+
+    // Only count revenue from paid orders
     let totalRevenue = 0;
-    allOrders.forEach((order) => {
+    const paidOrders = allOrders.filter((order) => order.isPaid);
+    paidOrders.forEach((order) => {
       totalRevenue += order.total;
     });
 

@@ -33,11 +33,23 @@ export async function GET(request) {
       include: { product: true, user: true },
     });
 
+    // Calculate earnings from paid orders only with 17% commission deducted
+    const paidOrders = orders.filter((order) => order.isPaid);
+    const grossEarnings = paidOrders.reduce(
+      (acc, order) => acc + order.total,
+      0
+    );
+    const commission = grossEarnings * 0.17;
+    const netEarnings = grossEarnings - commission;
+
     const dashboardData = {
       orders,
       totalOrders: orders.length,
       totalProducts: products.length,
-      totalEarnings: orders.reduce((acc, order) => acc + order.total, 0),
+      totalEarnings: netEarnings,
+      grossEarnings: grossEarnings,
+      commission: commission,
+      paidOrders: paidOrders.length,
       ratings,
     };
     return NextResponse.json(dashboardData, { status: 200 });

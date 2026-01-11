@@ -93,8 +93,6 @@ export async function GET(request) {
       where: { userId: userId },
     });
 
-    console.log("Ratings fetched for user:", ratings);
-
     return NextResponse.json({ ratings }, { status: 200 });
   } catch (error) {
     console.error("Error fetching ratings:", error);
