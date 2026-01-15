@@ -6,6 +6,9 @@ import { toast } from "react-hot-toast";
 import { useAuth } from "@clerk/nextjs";
 import axios from "axios";
 import { Loader2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { IconAi, IconBrandParsinta } from "@tabler/icons-react";
 
 export const categories = [
   "Skincare",
@@ -27,6 +30,9 @@ export default function StoreAddProduct() {
   const { getToken } = useAuth();
 
   const [images, setImages] = useState({ 1: null, 2: null, 3: null, 4: null });
+  const [imagesGenerated, setImagesGenerated] = useState(false);
+  const [imageGenerating, setImageGenerating] = useState(false);
+
   const [productInfo, setProductInfo] = useState({
     name: "",
     description: "",
@@ -36,6 +42,7 @@ export default function StoreAddProduct() {
   });
   const [loading, setLoading] = useState(false);
   const [aiUsed, setAiUsed] = useState(false);
+  const [imageGenerationConsent, setImageGenerationConsent] = useState(false);
 
   const onChangeHandler = (e) => {
     setProductInfo({ ...productInfo, [e.target.name]: e.target.value });
@@ -108,9 +115,24 @@ export default function StoreAddProduct() {
       formData.append("price", productInfo.price);
       formData.append("category", productInfo.category);
 
-      Object.keys(images).forEach((key) => {
-        images[key] && formData.append("images", images[key]);
-      });
+      // Handle both uploaded files and AI-generated image URLs
+      for (let i = 1; i <= 4; i++) {
+        if (images[i]) {
+          if (images[i] instanceof File) {
+            // It's an uploaded file
+            formData.append("images", images[i]);
+          } else if (typeof images[i] === "string") {
+            // It's an AI-generated image URL
+            // Fetch the image and convert to blob
+            const response = await fetch(images[i]);
+            const blob = await response.blob();
+            const file = new File([blob], `ai-generated-image-${i}.png`, {
+              type: "image/png",
+            });
+            formData.append("images", file);
+          }
+        }
+      }
 
       const { data } = await axios.post("/api/store/product", formData, {
         headers: {
@@ -126,6 +148,8 @@ export default function StoreAddProduct() {
         category: "",
       });
       setImages({ 1: null, 2: null, 3: null, 4: null });
+      setImagesGenerated(false);
+      setImageGenerationConsent(false);
     } catch (error) {
       console.error("Error adding product:", error);
       toast.error(
@@ -134,6 +158,69 @@ export default function StoreAddProduct() {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generateImages = async () => {
+    if (!images[1]) {
+      toast.error("Please upload at least one product image first.");
+      return;
+    }
+    try {
+      setImageGenerating(true);
+      const reader = new FileReader();
+      reader.readAsDataURL(images[1]);
+      reader.onloadend = async () => {
+        try {
+          const base64String = reader.result.split(",")[1];
+          const mimeType = images[1].type;
+          const token = await getToken();
+
+          await toast.promise(
+            axios.post(
+              "/api/store/ai/images",
+              {
+                image: base64String,
+                mimeType: mimeType,
+                productName: productInfo.name || "Product",
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            ),
+            {
+              loading: "Generating AI product images from different angles...",
+              success: (res) => {
+                const imageBase64Array = res.data.images;
+                if (imageBase64Array && imageBase64Array.length === 1) {
+                  // Convert base64 string to data URL for display
+                  const imageDataUrl = `data:image/png;base64,${imageBase64Array[0]}`;
+                  // Store generated image in slot 2
+                  setImages((prev) => ({
+                    ...prev,
+                    2: imageDataUrl,
+                  }));
+                  setImagesGenerated(true);
+                  return "Product image generated successfully!";
+                }
+                return "Could not generate product image.";
+              },
+              error: "Failed to generate product images.",
+            }
+          );
+        } catch (error) {
+          console.error("AI image generation failed:", error);
+          toast.error("Failed to generate product images.");
+        } finally {
+          setImageGenerating(false);
+        }
+      };
+    } catch (error) {
+      console.error("Error generating images:", error);
+      toast.error("Failed to generate images.");
+      setImageGenerating(false);
     }
   };
 
@@ -173,6 +260,66 @@ export default function StoreAddProduct() {
           </label>
         ))}
       </div>
+      {!imagesGenerated && (
+        <div className="mt-8">
+          <div className="flex items-center gap-3 mb-3">
+            <Checkbox
+              id="image-generation-consent"
+              checked={imageGenerationConsent}
+              onCheckedChange={setImageGenerationConsent}
+            />
+            <Label
+              htmlFor="image-generation-consent"
+              className="text-gray-500 text-sm cursor-pointer"
+            >
+              I consent to AI services generating product images based on the
+              uploaded image
+            </Label>
+          </div>
+          <button
+            type="button"
+            onClick={generateImages}
+            disabled={!imageGenerationConsent || imageGenerating}
+            className="p-2 flex items-center gap-2 bg-slate-800 rounded-2xl text-sm mb-2 hover:bg-slate-900 text-white disabled:opacity-50 disabled:cursor-not-allowed transition"
+          >
+            {imageGenerating ? (
+              <>
+                <Loader2 className="animate-spin h-5 w-5" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <IconAi className="h-6 w-6" />
+                Generate AI Image
+              </>
+            )}
+          </button>
+          <p className="text-gray-500 text-xs max-w-sm">
+            AI will generate 1 professional product image with optimal lighting
+            and a clean background based on your uploaded image.
+          </p>
+        </div>
+      )}
+
+      {imagesGenerated && (
+        <div className="mt-8 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <p className="text-green-700 text-sm font-medium">
+            ✓ AI image generated successfully! You now have 1 original + 1 AI
+            generated image ready to submit.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setImagesGenerated(false);
+              setImageGenerationConsent(false);
+              setImages((prev) => ({ ...prev, 2: null }));
+            }}
+            className="mt-2 text-sm text-green-700 hover:text-green-800 underline"
+          >
+            Generate different image
+          </button>
+        </div>
+      )}
 
       <label htmlFor="" className="flex flex-col gap-2 my-6 ">
         Name
@@ -257,6 +404,9 @@ export default function StoreAddProduct() {
           "Add Product"
         )}
       </button>
+      <p className="text-sm text-muted-foreground mt-4">
+        *AI Generated content maybe inaccurate.
+      </p>
     </form>
   );
 }
