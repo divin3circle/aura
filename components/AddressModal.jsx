@@ -19,7 +19,7 @@ const AddressModal = ({ setShowAddressModal }) => {
     city: "",
     state: "",
     zip: "",
-    country: "",
+    country: "Kenya",
     phone: "",
   });
 
@@ -73,7 +73,7 @@ const AddressModal = ({ setShowAddressModal }) => {
           value={address.name}
           className="p-2 px-4 outline-none border border-slate-200 rounded w-full"
           type="text"
-          placeholder="Enter your name"
+          placeholder="Enter your full name"
           required
         />
         <input
@@ -91,7 +91,7 @@ const AddressModal = ({ setShowAddressModal }) => {
           value={address.street}
           className="p-2 px-4 outline-none border border-slate-200 rounded w-full"
           type="text"
-          placeholder="Street"
+          placeholder="Estate / Street / House no."
           required
         />
         <div className="flex gap-4">
@@ -101,7 +101,7 @@ const AddressModal = ({ setShowAddressModal }) => {
             value={address.city}
             className="p-2 px-4 outline-none border border-slate-200 rounded w-full"
             type="text"
-            placeholder="City"
+            placeholder="Town / City"
             required
           />
           <input
@@ -110,7 +110,7 @@ const AddressModal = ({ setShowAddressModal }) => {
             value={address.state}
             className="p-2 px-4 outline-none border border-slate-200 rounded w-full"
             type="text"
-            placeholder="State"
+            placeholder="County"
             required
           />
         </div>
@@ -120,8 +120,9 @@ const AddressModal = ({ setShowAddressModal }) => {
             onChange={handleAddressChange}
             value={address.zip}
             className="p-2 px-4 outline-none border border-slate-200 rounded w-full"
-            type="number"
-            placeholder="Zip code"
+            type="text"
+            inputMode="numeric"
+            placeholder="Postal code (e.g. 00100)"
             required
           />
           <input
@@ -139,8 +140,8 @@ const AddressModal = ({ setShowAddressModal }) => {
           onChange={handleAddressChange}
           value={address.phone}
           className="p-2 px-4 outline-none border border-slate-200 rounded w-full"
-          type="text"
-          placeholder="Phone"
+          type="tel"
+          placeholder="Phone / M-Pesa no. (e.g. 0712 345 678)"
           required
         />
         <button
