@@ -4,22 +4,22 @@ import AddressModal from "./AddressModal";
 import { useSelector, useDispatch } from "react-redux";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import { Protect, useAuth, useUser } from "@clerk/nextjs";
+import { useAuth, useUser } from "@clerk/nextjs";
 import axios from "axios";
 import { fetchCart } from "@/lib/features/cart/cartSlice";
+import { formatPrice } from "@/lib/utils";
+import { shippingFor } from "@/lib/pricing";
 
 const OrderSummary = ({ totalPrice, items }) => {
   const { user } = useUser();
   const { getToken } = useAuth();
   const dispatch = useDispatch();
 
-  const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || "EUR";
-
   const router = useRouter();
 
   const addressList = useSelector((state) => state.address.list);
 
-  const [paymentMethod, setPaymentMethod] = useState("STRIPE");
+  const [paymentMethod, setPaymentMethod] = useState("PAYSTACK");
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [couponCodeInput, setCouponCodeInput] = useState("");
@@ -60,32 +60,30 @@ const OrderSummary = ({ totalPrice, items }) => {
       if (!selectedAddress) {
         return toast("Please select an address", { icon: "⚠️" });
       }
-      if (paymentMethod !== "STRIPE")
-        return toast.error("Only Stripe payment is available currently");
       const token = await getToken();
       const orderData = {
         addressId: selectedAddress.id,
         items: items,
         couponCode: coupon ? coupon.code : null,
-        paymentMethod: paymentMethod,
+        paymentMethod: "PAYSTACK",
       };
       const { data } = await axios.post("/api/orders", orderData, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      if (paymentMethod === "STRIPE") {
-        window.location.href = data.session.url;
-      } else {
-        toast.success(data.message || "Order placed successfully");
-        router.push(`/orders`);
-        dispatch(fetchCart({ getToken }));
-      }
+      // Redirect the customer to Paystack to complete payment (card or M-Pesa).
+      window.location.href = data.url;
     } catch (error) {
       toast.error("Failed to place order");
       return;
     }
   };
+
+  // Shipping is free within Nairobi, a flat KES 500 for any other county.
+  const shipping = selectedAddress ? shippingFor(selectedAddress.state) : null;
+  const discount = coupon ? (coupon.discount / 100) * totalPrice : 0;
+  const orderTotal = totalPrice - discount + (shipping || 0);
 
   return (
     <div className="w-full max-w-lg lg:max-w-85 bg-slate-50/30 border border-slate-200 text-slate-500 text-sm rounded-xl p-7">
@@ -94,26 +92,13 @@ const OrderSummary = ({ totalPrice, items }) => {
       <div className="flex gap-2 items-center">
         <input
           type="radio"
-          id="COD"
-          onChange={() => setPaymentMethod("COD")}
-          checked={paymentMethod === "COD"}
+          id="PAYSTACK"
+          checked
+          readOnly
           className="accent-gray-500"
         />
-        <label htmlFor="COD" className="cursor-pointer">
-          COD
-        </label>
-      </div>
-      <div className="flex gap-2 items-center mt-1">
-        <input
-          type="radio"
-          id="STRIPE"
-          name="payment"
-          onChange={() => setPaymentMethod("STRIPE")}
-          checked={paymentMethod === "STRIPE"}
-          className="accent-gray-500"
-        />
-        <label htmlFor="STRIPE" className="cursor-pointer">
-          Stripe Payment
+        <label htmlFor="PAYSTACK" className="cursor-pointer">
+          Pay with Paystack — card or M-Pesa
         </label>
       </div>
       <div className="my-4 py-4 border-y border-slate-200 text-slate-400">
@@ -165,22 +150,15 @@ const OrderSummary = ({ totalPrice, items }) => {
             {coupon && <p>Coupon:</p>}
           </div>
           <div className="flex flex-col gap-1 font-medium text-right">
-            <p>
-              {currency}
-              {totalPrice.toLocaleString()}
+            <p>{formatPrice(totalPrice)}</p>
+            <p className="font-medium">
+              {shipping === null
+                ? "—"
+                : shipping === 0
+                ? "Free"
+                : formatPrice(shipping)}
             </p>
-            <div className="font-semibold text-sm text-slate-500">
-              <p className="">
-                <Protect plan="plus" fallback={`${currency}5.36`}>
-                  Free
-                </Protect>
-              </p>
-            </div>
-            {coupon && (
-              <p>{`-${currency}${((coupon.discount / 100) * totalPrice).toFixed(
-                2
-              )}`}</p>
-            )}
+            {coupon && <p>{`-${formatPrice(discount)}`}</p>}
           </div>
         </div>
         {!coupon ? (
@@ -222,27 +200,7 @@ const OrderSummary = ({ totalPrice, items }) => {
       </div>
       <div className="flex justify-between py-4">
         <p>Total:</p>
-        <p className="font-medium text-right">
-          <Protect
-            plan="plus"
-            fallback={`${currency}${
-              coupon
-                ? (
-                    totalPrice +
-                    5.36 -
-                    (coupon.discount / 100) * totalPrice
-                  ).toFixed(2)
-                : (totalPrice + 5.36).toLocaleString()
-            }`}
-          >
-            {currency}
-            {coupon
-              ? (totalPrice + 0 - (coupon.discount / 100) * totalPrice).toFixed(
-                  2
-                )
-              : totalPrice.toLocaleString()}
-          </Protect>
-        </p>
+        <p className="font-medium text-right">{formatPrice(orderTotal)}</p>
       </div>
       <button
         onClick={(e) =>

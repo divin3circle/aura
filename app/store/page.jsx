@@ -13,11 +13,10 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/nextjs";
 import toast from "react-hot-toast";
 import axios from "axios";
+import { formatPrice } from "@/lib/utils";
 
 export default function Dashboard() {
   const { getToken } = useAuth();
-
-  const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || "$";
 
   const router = useRouter();
 
@@ -37,7 +36,7 @@ export default function Dashboard() {
     },
     {
       title: "Total Earnings",
-      value: currency + dashboardData.totalEarnings,
+      value: formatPrice(dashboardData.totalEarnings),
       icon: CircleDollarSignIcon,
     },
     { title: "Total Orders", value: dashboardData.totalOrders, icon: TagsIcon },

@@ -1,5 +1,6 @@
 "use client";
 import { addAddress } from "@/lib/features/address/addressSlice";
+import { KENYA_COUNTIES } from "@/lib/counties";
 import { useAuth } from "@clerk/nextjs";
 import axios from "axios";
 import { Loader2Icon, XIcon } from "lucide-react";
@@ -104,15 +105,22 @@ const AddressModal = ({ setShowAddressModal }) => {
             placeholder="Town / City"
             required
           />
-          <input
+          <select
             name="state"
             onChange={handleAddressChange}
             value={address.state}
-            className="p-2 px-4 outline-none border border-slate-200 rounded w-full"
-            type="text"
-            placeholder="County"
+            className="p-2 px-4 outline-none border border-slate-200 rounded w-full bg-white text-slate-500"
             required
-          />
+          >
+            <option value="" disabled>
+              County
+            </option>
+            {KENYA_COUNTIES.map((county) => (
+              <option key={county} value={county} className="text-slate-700">
+                {county}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="flex gap-4">
           <input

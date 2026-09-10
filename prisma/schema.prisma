@@ -28,6 +28,7 @@ model User {
 model Product {
     id          String   @id @default(cuid())
     name        String
+    subtitle    String   @default("")
     description String
     mrp         Float
     price       Float
@@ -52,6 +53,8 @@ enum OrderStatus {
 }
 
 enum PaymentMethod {
+    PAYSTACK
+    // Legacy — retained only for historical orders; no longer offered at checkout.
     COD
     STRIPE
 }

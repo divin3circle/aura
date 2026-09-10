@@ -3,14 +3,13 @@ import Counter from "@/components/Counter";
 import OrderSummary from "@/components/OrderSummary";
 import PageTitle from "@/components/PageTitle";
 import { deleteItemFromCart } from "@/lib/features/cart/cartSlice";
+import { formatPrice } from "@/lib/utils";
 import { Trash2Icon } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
 export default function Cart() {
-  const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || "EUR";
-
   const { cartItems } = useSelector((state) => state.cart);
   const products = useSelector((state) => state.product.list);
 
@@ -81,18 +80,14 @@ export default function Cart() {
                     <div>
                       <p className="max-sm:text-sm">{item.name}</p>
                       <p className="text-xs text-slate-500">{item.category}</p>
-                      <p>
-                        {currency}
-                        {item.price}
-                      </p>
+                      <p>{formatPrice(item.price)}</p>
                     </div>
                   </td>
                   <td className="text-center">
                     <Counter productId={item.id} />
                   </td>
                   <td className="text-center">
-                    {currency}
-                    {(item.price * item.quantity).toLocaleString()}
+                    {formatPrice(item.price * item.quantity)}
                   </td>
                   <td className="text-center max-md:hidden">
                     <button

@@ -5,12 +5,11 @@ import Image from "next/image";
 import Loading from "@/components/Loading";
 import { useAuth, useUser } from "@clerk/nextjs";
 import axios from "axios";
+import { formatPrice } from "@/lib/utils";
 
 export default function StoreManageProducts() {
   const { getToken } = useAuth();
   const { user } = useUser();
-
-  const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || "EUR";
 
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState([]);
@@ -111,10 +110,10 @@ export default function StoreManageProducts() {
                 {product.description}
               </td>
               <td className="px-4 py-3 hidden md:table-cell">
-                {currency} {product.mrp.toLocaleString()}
+                {formatPrice(product.mrp)}
               </td>
               <td className="px-4 py-3">
-                {currency} {product.price.toLocaleString()}
+                {formatPrice(product.price)}
               </td>
               <td className="px-4 py-3 text-center">
                 <label className="relative inline-flex items-center cursor-pointer text-gray-900 gap-3">

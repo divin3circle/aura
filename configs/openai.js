@@ -13,16 +13,31 @@ const getAPIKey = (type) => {
   }
 };
 
-const apiKey = getAPIKey("details");
+// Lazily create the client so a missing key only errors when an AI route is
+// actually called — not at import time (which would break `next build` and any
+// deploy while the AI keys are intentionally disabled).
+let client = null;
 
-if (!apiKey) {
-  throw new Error("OpenAI API key is not configured.");
-}
+const getClient = () => {
+  if (client) return client;
+  const apiKey = getAPIKey("details");
+  if (!apiKey) {
+    throw new Error("OpenAI API key is not configured.");
+  }
+  client = new OpenAI({
+    apiKey: apiKey,
+    baseURL: process.env.OPEN_AI_BASE_URL,
+    maxRetries: 0,
+  });
+  return client;
+};
 
-const openai = new OpenAI({
-  apiKey: apiKey,
-  baseURL: process.env.OPEN_AI_BASE_URL,
-  maxRetries: 0,
-});
+// Proxy defers instantiation until the first property access at request time.
+const openai = new Proxy(
+  {},
+  {
+    get: (_target, prop) => getClient()[prop],
+  }
+);
 
 export default openai;

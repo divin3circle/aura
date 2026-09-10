@@ -42,11 +42,8 @@ export async function GET(request) {
     };
 
     const revenueByPaymentMethod = {
-      STRIPE: orders
-        .filter((o) => o.paymentMethod === "STRIPE" && o.isPaid)
-        .reduce((acc, o) => acc + o.total, 0),
-      COD: orders
-        .filter((o) => o.paymentMethod === "COD" && o.isPaid)
+      PAYSTACK: orders
+        .filter((o) => o.paymentMethod === "PAYSTACK" && o.isPaid)
         .reduce((acc, o) => acc + o.total, 0),
     };
 

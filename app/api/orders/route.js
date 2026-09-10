@@ -1,8 +1,8 @@
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import Stripe from "stripe";
-import { PaymentMethod } from "@prisma/client";
+import { applyMargin, shippingFor } from "@/lib/pricing";
+import axios from "axios";
 
 export async function POST(request) {
   try {
@@ -77,12 +77,18 @@ export async function POST(request) {
       if (!ordersByStore.has(storeId)) {
         ordersByStore.set(storeId, []);
       }
-      ordersByStore.get(storeId).push({ ...item, price: product.price });
+      // Charge the margin-adjusted price (base price in DB × MARGIN).
+      ordersByStore.get(storeId).push({ ...item, price: applyMargin(product.price) });
     }
 
     let orderIds = [];
     let fullAmount = 0;
 
+    // Shipping: free within Nairobi, flat KES 500 elsewhere — added once per checkout.
+    const deliveryAddress = await prisma.address.findUnique({
+      where: { id: addressId },
+    });
+    const shippingFee = shippingFor(deliveryAddress?.state);
     let isShippingFeeAdded = false;
 
     for (const [storeId, sellerItems] of ordersByStore.entries()) {
@@ -95,8 +101,7 @@ export async function POST(request) {
         total -= (total * coupon.discount) / 100;
       }
 
-      if (!isPlusMember && !isShippingFeeAdded) {
-        const shippingFee = 5.36;
+      if (!isShippingFeeAdded) {
         total += shippingFee;
         isShippingFeeAdded = true;
       }
@@ -124,49 +129,36 @@ export async function POST(request) {
       orderIds.push(order.id);
     }
 
-    if (paymentMethod === PaymentMethod.STRIPE) {
-      const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-      const origin = request.headers.get("origin");
+    // Initialize a Paystack transaction and hand the client the redirect URL.
+    // The cart is cleared and orders marked paid by the Paystack webhook on charge.success.
+    const buyer = await prisma.user.findUnique({ where: { id: userId } });
+    const origin = request.headers.get("origin");
 
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ["card"],
-        line_items: [
-          {
-            price_data: {
-              currency: "eur",
-              product_data: {
-                name: "Order Payment",
-              },
-              unit_amount: Math.round(fullAmount * 100),
-            },
-            quantity: 1,
-          },
-        ],
-        expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
-        mode: "payment",
-        success_url: `${origin}/loading?nextUrl=orders`,
-        cancel_url: `${origin}/cart`,
+    const init = await axios.post(
+      "https://api.paystack.co/transaction/initialize",
+      {
+        email: buyer.email,
+        amount: Math.round(fullAmount * 100), // KES -> subunit (cents)
+        currency: "KES",
+        callback_url: `${origin}/loading?nextUrl=orders`,
         metadata: {
           orderIds: orderIds.join(","),
           userId: userId,
           appId: "AuraEcom",
         },
-      });
-      return NextResponse.json({ session }, { status: 200 });
-    }
-
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        cart: { cartItems: {}, total: 0 },
       },
-    });
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
-    return NextResponse.json({
-      message: "Order(s) placed successfully.",
-      orderIds: orderIds,
-      fullAmount: parseFloat(fullAmount.toFixed(2)),
-    });
+    return NextResponse.json(
+      { url: init.data.data.authorization_url, orderIds },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error in orders route:", error);
     return NextResponse.json(
@@ -191,10 +183,7 @@ export async function GET(request) {
     const orders = await prisma.order.findMany({
       where: {
         userId: userId,
-        OR: [
-          { paymentMethod: PaymentMethod.COD },
-          { AND: [{ paymentMethod: PaymentMethod.STRIPE }, { isPaid: true }] },
-        ],
+        isPaid: true,
       },
       include: {
         orderItems: { include: { product: true } },

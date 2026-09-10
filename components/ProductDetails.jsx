@@ -1,6 +1,7 @@
 'use client'
 
 import { addToCart } from "@/lib/features/cart/cartSlice";
+import { formatPrice } from "@/lib/utils";
 import { StarIcon, TagIcon, EarthIcon, CreditCardIcon, UserIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -11,7 +12,7 @@ import { useDispatch, useSelector } from "react-redux";
 const ProductDetails = ({ product }) => {
 
     const productId = product.id;
-    const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || '$';
+    const hasDiscount = product.mrp > product.price;
 
     const cart = useSelector(state => state.cart.cartItems);
     const dispatch = useDispatch();
@@ -31,13 +32,13 @@ const ProductDetails = ({ product }) => {
             <div className="flex max-sm:flex-col-reverse gap-3">
                 <div className="flex sm:flex-col gap-3">
                     {product.images.map((image, index) => (
-                        <div key={index} onClick={() => setMainImage(product.images[index])} className="bg-slate-100 flex items-center justify-center size-26 rounded-lg group cursor-pointer">
-                            <Image src={image} className="group-hover:scale-103 group-active:scale-95 transition" alt="" width={45} height={45} />
+                        <div key={index} onClick={() => setMainImage(product.images[index])} className={`relative size-26 rounded-lg overflow-hidden ring-1 cursor-pointer group ${mainImage === image ? 'ring-slate-800' : 'ring-black/5'}`}>
+                            <Image src={image} fill sizes="104px" className="object-cover group-hover:scale-105 group-active:scale-95 transition" alt={product.name} />
                         </div>
                     ))}
                 </div>
-                <div className="flex justify-center items-center h-100 sm:size-113 bg-slate-100 rounded-lg ">
-                    <Image src={mainImage} alt="" width={250} height={250} />
+                <div className="relative h-100 sm:size-113 rounded-lg overflow-hidden ring-1 ring-black/5">
+                    <Image src={mainImage} alt={product.name} fill sizes="(max-width: 640px) 100vw, 452px" className="object-cover" />
                 </div>
             </div>
             <div className="flex-1">
@@ -49,13 +50,17 @@ const ProductDetails = ({ product }) => {
                     <p className="text-sm ml-3 text-slate-500">{product.rating.length} Reviews</p>
                 </div>
                 <div className="flex items-start my-6 gap-3 text-2xl font-semibold text-slate-800">
-                    <p> {currency}{product.price} </p>
-                    <p className="text-xl text-slate-500 line-through">{currency}{product.mrp}</p>
+                    <p>{formatPrice(product.price)}</p>
+                    {hasDiscount && (
+                        <p className="text-xl text-slate-500 line-through">{formatPrice(product.mrp)}</p>
+                    )}
                 </div>
-                <div className="flex items-center gap-2 text-slate-500">
-                    <TagIcon size={14} />
-                    <p>Save {((product.mrp - product.price) / product.mrp * 100).toFixed(0)}% right now</p>
-                </div>
+                {hasDiscount && (
+                    <div className="flex items-center gap-2 text-slate-500">
+                        <TagIcon size={14} />
+                        <p>Save {((product.mrp - product.price) / product.mrp * 100).toFixed(0)}% right now</p>
+                    </div>
+                )}
                 <div className="flex items-end gap-5 mt-10">
                     {
                         cart[productId] && (

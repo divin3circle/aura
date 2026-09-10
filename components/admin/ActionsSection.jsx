@@ -11,9 +11,9 @@ export default function ActionsSection({ storeFrontUrl }) {
     // TODO: Navigate to admin-store chat page when available
   };
 
-  const handleStripePayout = async () => {
-    toast("Stripe payout not set up yet");
-    // TODO: Integrate Stripe Connect payouts to store's account
+  const handlePayout = async () => {
+    toast("Paystack payout not set up yet");
+    // TODO: Integrate Paystack Transfers to pay out to the store's account
   };
 
   return (
@@ -33,11 +33,11 @@ export default function ActionsSection({ storeFrontUrl }) {
           Message owner
         </button>
         <button
-          onClick={handleStripePayout}
+          onClick={handlePayout}
           className="px-4 py-2 bg-pink-400 text-white rounded-2xl hover:bg-pink-700 disabled:opacity-50 text-sm"
           title="Connect payouts to enable"
         >
-          Pay store (Stripe)
+          Pay store (Paystack)
         </button>
         <a
           href={storeFrontUrl}

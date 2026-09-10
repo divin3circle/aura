@@ -12,11 +12,10 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { formatPrice } from "@/lib/utils";
 
 export default function AdminDashboard() {
   const { getToken } = useAuth();
-
-  const currency = process.env.NEXT_PUBLIC_CURRENCY_SYMBOL || "$";
 
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState({
@@ -35,7 +34,7 @@ export default function AdminDashboard() {
     },
     {
       title: "Total Revenue",
-      value: currency + dashboardData.revenue,
+      value: formatPrice(dashboardData.revenue),
       icon: CircleDollarSignIcon,
     },
     { title: "Total Orders", value: dashboardData.orders, icon: TagsIcon },
