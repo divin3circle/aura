@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import authSeller from "@/middlewares/authSeller";
+import { categoriesFor } from "@/lib/catalog";
 
 export async function GET(request, { params }) {
   try {
@@ -75,6 +76,115 @@ export async function GET(request, { params }) {
     );
   } catch (error) {
     console.error("Error fetching product analytics:", error);
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+}
+
+export async function PUT(request, { params }) {
+  try {
+    const { userId } = getAuth(request);
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const storeId = await authSeller(userId);
+    if (!storeId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { id } = await params;
+    if (!id) {
+      return NextResponse.json(
+        { error: "Product ID is required" },
+        { status: 400 }
+      );
+    }
+
+    // Ownership check
+    const existing = await prisma.product.findUnique({ where: { id } });
+    if (!existing || existing.storeId !== storeId) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    const body = await request.json();
+    const {
+      name,
+      subtitle,
+      description,
+      category,
+      department,
+      brand,
+      price,
+      mrp,
+      discountedPrice: discountedPriceRaw,
+      options,
+      variants,
+    } = body;
+
+    // Validate category vs department when both are provided
+    const effectiveDept = department ?? existing.department;
+    if (category) {
+      const validCategories = categoriesFor(effectiveDept);
+      if (validCategories.length > 0 && !validCategories.includes(category)) {
+        return NextResponse.json(
+          {
+            error: `Category "${category}" is not valid for department "${effectiveDept}"`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    const discountedPrice =
+      discountedPriceRaw !== undefined && discountedPriceRaw !== null && discountedPriceRaw !== ""
+        ? Number(discountedPriceRaw)
+        : null;
+
+    // Build scalar update payload — only include fields that were provided
+    const scalarUpdate = {};
+    if (name !== undefined) scalarUpdate.name = name;
+    if (subtitle !== undefined) scalarUpdate.subtitle = subtitle;
+    if (description !== undefined) scalarUpdate.description = description;
+    if (category !== undefined) scalarUpdate.category = category;
+    if (department !== undefined) scalarUpdate.department = department;
+    if (brand !== undefined) scalarUpdate.brand = brand;
+    if (price !== undefined) scalarUpdate.price = Number(price);
+    if (mrp !== undefined) scalarUpdate.mrp = Number(mrp);
+    if (discountedPriceRaw !== undefined) scalarUpdate.discountedPrice = discountedPrice;
+    if (options !== undefined) scalarUpdate.options = options;
+
+    // Replace variants when provided
+    if (variants !== undefined) {
+      await prisma.productVariant.deleteMany({ where: { productId: id } });
+    }
+
+    const updatedProduct = await prisma.product.update({
+      where: { id },
+      data: {
+        ...scalarUpdate,
+        ...(variants !== undefined && variants.length > 0 && {
+          variants: {
+            create: variants.map((v) => ({
+              options: v.options ?? {},
+              price: Number(v.price),
+              mrp: Number(v.mrp ?? v.price),
+              discountedPrice:
+                v.discountedPrice !== undefined &&
+                v.discountedPrice !== null &&
+                v.discountedPrice !== ""
+                  ? Number(v.discountedPrice)
+                  : null,
+              inStock: v.inStock !== undefined ? Boolean(v.inStock) : true,
+            })),
+          },
+        }),
+      },
+      include: { variants: true },
+    });
+
+    return NextResponse.json({ product: updatedProduct }, { status: 200 });
+  } catch (error) {
+    console.error("Error updating product:", error);
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }
