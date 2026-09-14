@@ -14,11 +14,7 @@ export async function POST(request) {
 
     const storeId = await authSeller(userId);
     if (!storeId) {
-      return NextResponse.json(
-        "Forbidden",
-        { error: "Not authorized" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const formData = await request.formData();
@@ -42,7 +38,10 @@ export async function POST(request) {
     let options = [];
     try {
       const optionsRaw = formData.get("options");
-      if (optionsRaw && optionsRaw !== "") options = JSON.parse(optionsRaw);
+      if (optionsRaw && optionsRaw !== "") {
+        const parsed = JSON.parse(optionsRaw);
+        if (Array.isArray(parsed)) options = parsed;
+      }
     } catch {
       // ignore malformed options; default to []
     }
@@ -50,7 +49,10 @@ export async function POST(request) {
     let variants = [];
     try {
       const variantsRaw = formData.get("variants");
-      if (variantsRaw && variantsRaw !== "") variants = JSON.parse(variantsRaw);
+      if (variantsRaw && variantsRaw !== "") {
+        const parsed = JSON.parse(variantsRaw);
+        if (Array.isArray(parsed)) variants = parsed;
+      }
     } catch {
       // ignore malformed variants; default to []
     }
@@ -64,11 +66,8 @@ export async function POST(request) {
       !category
     ) {
       return NextResponse.json(
-        "Missing required fields for product",
-        { error: "Missing required fields" },
-        {
-          status: 400,
-        }
+        { error: "Missing required fields for product" },
+        { status: 400 }
       );
     }
 
@@ -139,11 +138,7 @@ export async function POST(request) {
     );
   } catch (error) {
     console.error("Error creating product:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }
 

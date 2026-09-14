@@ -151,20 +151,21 @@ export async function PUT(request, { params }) {
     if (price !== undefined) scalarUpdate.price = Number(price);
     if (mrp !== undefined) scalarUpdate.mrp = Number(mrp);
     if (discountedPriceRaw !== undefined) scalarUpdate.discountedPrice = discountedPrice;
-    if (options !== undefined) scalarUpdate.options = options;
+    if (options !== undefined) scalarUpdate.options = Array.isArray(options) ? options : [];
 
-    // Replace variants when provided
-    if (variants !== undefined) {
-      await prisma.productVariant.deleteMany({ where: { productId: id } });
-    }
+    // Normalize variants to an array when provided (non-array → empty)
+    const variantsProvided = variants !== undefined;
+    const parsedVariants = Array.isArray(variants) ? variants : [];
 
     const updatedProduct = await prisma.product.update({
       where: { id },
       data: {
         ...scalarUpdate,
-        ...(variants !== undefined && variants.length > 0 && {
+        // Atomic replace: delete existing + create new in a single update
+        ...(variantsProvided && {
           variants: {
-            create: variants.map((v) => ({
+            deleteMany: {},
+            create: parsedVariants.map((v) => ({
               options: v.options ?? {},
               price: Number(v.price),
               mrp: Number(v.mrp ?? v.price),
