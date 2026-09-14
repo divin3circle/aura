@@ -6,7 +6,7 @@ export async function GET(request) {
   try {
     const { userId } = getAuth(request);
     if (!userId) {
-      return NextResponse.json("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const addresses = await prisma.address.findMany({
@@ -19,11 +19,7 @@ export async function GET(request) {
     return NextResponse.json({ addresses }, { status: 200 });
   } catch (error) {
     console.error("Error in address route:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }
 
@@ -31,12 +27,11 @@ export async function POST(request) {
   try {
     const { userId } = getAuth(request);
     if (!userId) {
-      return NextResponse.json("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const { address } = await request.json();
     if (!address) {
       return NextResponse.json(
-        "Address data is required",
         { error: "MISSING_PARAMETERS" },
         { status: 400 }
       );
@@ -55,10 +50,6 @@ export async function POST(request) {
     );
   } catch (error) {
     console.error("Error in address route:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }

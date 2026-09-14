@@ -7,13 +7,12 @@ export async function GET(request) {
   try {
     const { userId } = getAuth(request);
     if (!userId) {
-      return NextResponse.json("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const storeId = await authSeller(userId);
     if (!storeId) {
       return NextResponse.json(
-        "Forbidden",
         { error: "Not authorized" },
         { status: 403 }
       );
@@ -34,11 +33,7 @@ export async function GET(request) {
     return NextResponse.json({ orders: orders }, { status: 200 });
   } catch (error) {
     console.error("Error fetching orders:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }
 
@@ -46,13 +41,12 @@ export async function POST(request) {
   try {
     const { user } = getAuth(request);
     if (!user) {
-      return NextResponse.json("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const storeId = await authSeller(user.id);
     if (!storeId) {
       return NextResponse.json(
-        "Forbidden",
         { error: "Not authorized" },
         { status: 403 }
       );
@@ -62,7 +56,6 @@ export async function POST(request) {
 
     if (!orderId || !status) {
       return NextResponse.json(
-        "Order ID and status are required",
         { error: "MISSING_PARAMETERS" },
         { status: 400 }
       );
@@ -77,10 +70,6 @@ export async function POST(request) {
     );
   } catch (error) {
     console.error("Error fetching orders:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }

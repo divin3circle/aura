@@ -7,7 +7,7 @@ export async function POST(request) {
   try {
     const { userId } = getAuth(request);
     if (!userId) {
-      return NextResponse.json("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const formData = await request.formData();
     const name = formData.get("name");
@@ -27,9 +27,10 @@ export async function POST(request) {
       !email ||
       !contact
     ) {
-      return NextResponse.json("Missing required fields for store", {
-        status: 400,
-      });
+      return NextResponse.json(
+        { error: "Missing required fields for store" },
+        { status: 400 }
+      );
     }
 
     const store = await prisma.store.findFirst({
@@ -37,9 +38,10 @@ export async function POST(request) {
     });
 
     if (store) {
-      return NextResponse.json("Store already exists for this user", {
-        status: store.status,
-      });
+      return NextResponse.json(
+        { error: "Store already exists for this user" },
+        { status: 409 }
+      );
     }
 
     const isUsernameTaken = await prisma.store.findFirst({
@@ -48,13 +50,8 @@ export async function POST(request) {
 
     if (isUsernameTaken) {
       return NextResponse.json(
-        "Username is already taken",
-        {
-          error: "USERNAME_TAKEN",
-        },
-        {
-          status: 409,
-        }
+        { error: "USERNAME_TAKEN" },
+        { status: 409 }
       );
     }
 
@@ -90,10 +87,7 @@ export async function POST(request) {
       where: { id: userId },
       data: { store: { connect: { id: newStore.id } } },
     });
-    return NextResponse.json(newStore, {
-      status: 201,
-      message: "Store creation applied successfully. Waiting for approval.",
-    });
+    return NextResponse.json(newStore, { status: 201 });
   } catch (error) {
     console.error("Error creating store:", error);
     return NextResponse.json(
@@ -109,7 +103,7 @@ export async function GET(request) {
   try {
     const { userId } = getAuth(request);
     if (!userId) {
-      return NextResponse.json("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const store = await prisma.store.findFirst({
       where: { userId: userId },
@@ -121,9 +115,10 @@ export async function GET(request) {
       });
     }
 
-    return NextResponse.json("No store found for this user", {
-      status: 404,
-    });
+    return NextResponse.json(
+      { error: "No store found for this user" },
+      { status: 404 }
+    );
   } catch (error) {
     console.error("Error creating store:", error);
     return NextResponse.json(

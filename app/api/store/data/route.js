@@ -8,7 +8,6 @@ export async function GET(request) {
 
     if (!usernameParams) {
       return NextResponse.json(
-        "Username query is required",
         { error: "Missing username" },
         { status: 400 }
       );
@@ -18,7 +17,6 @@ export async function GET(request) {
 
     if (!username) {
       return NextResponse.json(
-        "Username query is required",
         { error: "Missing username" },
         { status: 400 }
       );
@@ -31,7 +29,6 @@ export async function GET(request) {
 
     if (!store) {
       return NextResponse.json(
-        "Store not found",
         { error: "Store not found" },
         { status: 404 }
       );
@@ -45,10 +42,6 @@ export async function GET(request) {
     );
   } catch (error) {
     console.error("Error getting store:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }

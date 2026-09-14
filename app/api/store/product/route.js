@@ -9,7 +9,7 @@ export async function POST(request) {
   try {
     const { userId } = getAuth(request);
     if (!userId) {
-      return NextResponse.json("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const storeId = await authSeller(userId);
@@ -151,7 +151,7 @@ export async function GET(request) {
   try {
     const { userId } = getAuth(request);
     if (!userId) {
-      return NextResponse.json("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const storeId = await authSeller(userId);

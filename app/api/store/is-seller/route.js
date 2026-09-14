@@ -7,7 +7,7 @@ export async function GET(request) {
   try {
     const { userId } = getAuth(request);
     if (!userId) {
-      return NextResponse.json("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const storeId = await authSeller(userId);
@@ -28,10 +28,6 @@ export async function GET(request) {
     });
   } catch (error) {
     console.error("Error getting seller data:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }

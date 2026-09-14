@@ -7,13 +7,12 @@ export async function GET(request) {
   try {
     const { userId } = getAuth(request);
     if (!userId) {
-      return NextResponse.json("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const storeId = await authSeller(userId);
     if (!storeId) {
       return NextResponse.json(
-        "Forbidden",
         { error: "Not authorized" },
         { status: 403 }
       );
@@ -55,10 +54,6 @@ export async function GET(request) {
     return NextResponse.json(dashboardData, { status: 200 });
   } catch (error) {
     console.error("Error getting seller data:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }

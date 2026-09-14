@@ -7,13 +7,12 @@ export async function POST(request) {
   try {
     const { userId } = getAuth(request);
     if (!userId) {
-      return NextResponse.json("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { productId } = await request.json();
     if (!productId) {
       return NextResponse.json(
-        "Product ID is required",
         { error: "MISSING_PRODUCT_ID" },
         { status: 400 }
       );
@@ -22,7 +21,6 @@ export async function POST(request) {
     const storeId = await authSeller(userId);
     if (!storeId) {
       return NextResponse.json(
-        "Forbidden",
         { error: "Not authorized" },
         { status: 403 }
       );
@@ -33,7 +31,6 @@ export async function POST(request) {
     });
     if (!product) {
       return NextResponse.json(
-        "Product not found",
         { error: "PRODUCT_NOT_FOUND" },
         { status: 404 }
       );
@@ -49,10 +46,6 @@ export async function POST(request) {
     );
   } catch (error) {
     console.error("Error toggling product stock status:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }

@@ -6,13 +6,12 @@ export async function POST(request) {
   try {
     const { userId } = getAuth(request);
     if (!userId) {
-      return NextResponse.json("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { cart } = await request.json();
     if (!cart) {
       return NextResponse.json(
-        "Cart data is required",
         { error: "MISSING_PARAMETERS" },
         { status: 400 }
       );
@@ -29,11 +28,7 @@ export async function POST(request) {
     );
   } catch (error) {
     console.error("Error in cart route:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }
 
@@ -41,7 +36,7 @@ export async function GET(request) {
   try {
     const { userId } = getAuth(request);
     if (!userId) {
-      return NextResponse.json("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const userCart = await prisma.user.findUnique({
@@ -56,10 +51,6 @@ export async function GET(request) {
     return NextResponse.json({ cart }, { status: 200 });
   } catch (error) {
     console.error("Error fetching cart:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }

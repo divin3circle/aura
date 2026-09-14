@@ -15,7 +15,7 @@ export async function POST(request) {
       .digest("hex");
 
     if (!signature || signature !== expected) {
-      return NextResponse.json("Invalid signature", { status: 401 });
+      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
     }
 
     const event = JSON.parse(body);
@@ -46,6 +46,6 @@ export async function POST(request) {
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (error) {
     console.error("Error in Paystack webhook:", error);
-    return NextResponse.json("Bad Request", { status: 400 });
+    return NextResponse.json({ error: "Bad Request" }, { status: 400 });
   }
 }

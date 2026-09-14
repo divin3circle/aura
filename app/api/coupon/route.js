@@ -7,8 +7,7 @@ export async function POST(request) {
     const { userId, has } = getAuth(request);
     if (!userId) {
       return NextResponse.json(
-        "Unauthorized",
-        { message: "Unauthorized" },
+        { error: "Unauthorized" },
         { status: 401 }
       );
     }
@@ -16,8 +15,7 @@ export async function POST(request) {
     const { code } = await request.json();
     if (!code) {
       return NextResponse.json(
-        "Coupon code is required",
-        { message: "Coupon code is required" },
+        { error: "Coupon code is required" },
         { status: 400 }
       );
     }
@@ -60,10 +58,6 @@ export async function POST(request) {
     );
   } catch (error) {
     console.error("Error in coupon route:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }

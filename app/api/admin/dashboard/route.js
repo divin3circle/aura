@@ -7,12 +7,11 @@ export async function GET(request) {
   try {
     const { userId } = getAuth(request);
     if (!userId) {
-      return NextResponse.json("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const isAdmin = await authAdmin(userId);
     if (!isAdmin) {
       return NextResponse.json(
-        "Forbidden",
         { error: "Not authorized" },
         { status: 403 }
       );
@@ -46,17 +45,9 @@ export async function GET(request) {
       revenue: totalRevenue.toFixed(2),
     };
 
-    return NextResponse.json(
-      dashboardData,
-      { data: dashboardData },
-      { status: 200 }
-    );
+    return NextResponse.json(dashboardData, { status: 200 });
   } catch (error) {
     console.error("Error in admin dashboard route:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }

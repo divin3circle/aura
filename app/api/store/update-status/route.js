@@ -7,13 +7,12 @@ export async function PATCH(request) {
   try {
     const { userId } = getAuth(request);
     if (!userId) {
-      return NextResponse.json("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const storeId = await authSeller(userId);
     if (!storeId) {
       return NextResponse.json(
-        "Forbidden",
         { error: "Not authorized" },
         { status: 403 }
       );
@@ -37,10 +36,6 @@ export async function PATCH(request) {
     );
   } catch (error) {
     console.error("Error fetching orders:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }

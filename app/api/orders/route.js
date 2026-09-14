@@ -10,7 +10,6 @@ export async function POST(request) {
     const { userId, has } = getAuth(request);
     if (!userId) {
       return NextResponse.json(
-        "Unauthorized",
         { error: "Unauthorized" },
         { status: 401 }
       );
@@ -20,7 +19,6 @@ export async function POST(request) {
       await request.json();
     if (!addressId || !items || !paymentMethod) {
       return NextResponse.json(
-        "Missing required parameters",
         { error: "Missing required parameters" },
         { status: 400 }
       );
@@ -38,7 +36,6 @@ export async function POST(request) {
 
       if (!coupon) {
         return NextResponse.json(
-          "Invalid coupon code",
           { error: "Invalid coupon code" },
           { status: 400 }
         );
@@ -73,7 +70,6 @@ export async function POST(request) {
       const quantity = Number(item.quantity);
       if (!Number.isInteger(quantity) || quantity < 1) {
         return NextResponse.json(
-          "Invalid quantity",
           { error: "Invalid quantity" },
           { status: 400 }
         );
@@ -86,7 +82,6 @@ export async function POST(request) {
 
       if (!product) {
         return NextResponse.json(
-          "Product not found",
           { error: "Product not found" },
           { status: 400 }
         );
@@ -99,7 +94,6 @@ export async function POST(request) {
 
       if (product.variants.length > 0 && !variant) {
         return NextResponse.json(
-          "Please select a variant",
           { error: "Please select a variant" },
           { status: 400 }
         );
@@ -203,11 +197,7 @@ export async function POST(request) {
     );
   } catch (error) {
     console.error("Error in orders route:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }
 
@@ -216,7 +206,6 @@ export async function GET(request) {
     const { userId } = getAuth(request);
     if (!userId) {
       return NextResponse.json(
-        "Unauthorized",
         { error: "Unauthorized" },
         { status: 401 }
       );
@@ -236,10 +225,6 @@ export async function GET(request) {
     return NextResponse.json({ orders: orders }, { status: 200 });
   } catch (error) {
     console.error("Error in orders route:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }

@@ -33,10 +33,6 @@ export async function GET(request) {
     return NextResponse.json({ products }, { status: 200 });
   } catch (error) {
     console.error("Error fetching products:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }

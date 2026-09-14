@@ -8,12 +8,11 @@ export async function POST(request) {
   try {
     const { userId } = getAuth(request);
     if (!userId) {
-      return NextResponse.json("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const isAdmin = await authAdmin(userId);
     if (!isAdmin) {
       return NextResponse.json(
-        "Forbidden",
         { error: "Not authorized" },
         { status: 403 }
       );
@@ -21,7 +20,6 @@ export async function POST(request) {
     const { coupon } = await request.json();
     if (!coupon || !coupon.code || !coupon.discount) {
       return NextResponse.json(
-        "Coupon code and discount are required",
         { error: "MISSING_PARAMETERS" },
         { status: 400 }
       );
@@ -49,11 +47,7 @@ export async function POST(request) {
     );
   } catch (error) {
     console.error("Error in admin coupon route:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }
 
@@ -61,12 +55,11 @@ export async function DELETE(request) {
   try {
     const { userId } = getAuth(request);
     if (!userId) {
-      return NextResponse.json("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const isAdmin = await authAdmin(userId);
     if (!isAdmin) {
       return NextResponse.json(
-        "Forbidden",
         { error: "Not authorized" },
         { status: 403 }
       );
@@ -76,7 +69,6 @@ export async function DELETE(request) {
     const code = searchParams.get("code");
     if (!code) {
       return NextResponse.json(
-        "Coupon code is required",
         { error: "MISSING_PARAMETERS" },
         { status: 400 }
       );
@@ -90,11 +82,7 @@ export async function DELETE(request) {
     });
   } catch (error) {
     console.error("Error in admin coupon DELETE route:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }
 
@@ -102,12 +90,11 @@ export async function GET(request) {
   try {
     const { userId } = getAuth(request);
     if (!userId) {
-      return NextResponse.json("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const isAdmin = await authAdmin(userId);
     if (!isAdmin) {
       return NextResponse.json(
-        "Forbidden",
         { error: "Not authorized" },
         { status: 403 }
       );
@@ -116,10 +103,6 @@ export async function GET(request) {
     return NextResponse.json({ coupons }, { status: 200 });
   } catch (error) {
     console.error("Error in admin coupon DELETE route:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }

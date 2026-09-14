@@ -7,12 +7,11 @@ export async function POST(request) {
   try {
     const { userId } = getAuth(request);
     if (!userId) {
-      return NextResponse.json("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const isAdmin = await authAdmin(userId);
     if (!isAdmin) {
       return NextResponse.json(
-        "Forbidden",
         { error: "Not authorized" },
         { status: 403 }
       );
@@ -21,7 +20,6 @@ export async function POST(request) {
     const { storeId, status } = await request.json();
     if (!storeId || !status) {
       return NextResponse.json(
-        "Store ID and status are required",
         { error: "MISSING_PARAMETERS" },
         { status: 400 }
       );
@@ -39,7 +37,6 @@ export async function POST(request) {
       });
     } else {
       return NextResponse.json(
-        "Invalid status value",
         { error: "INVALID_STATUS" },
         { status: 400 }
       );
@@ -51,11 +48,7 @@ export async function POST(request) {
     );
   } catch (error) {
     console.error("Error approving store:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }
 
@@ -63,12 +56,11 @@ export async function GET(request) {
   try {
     const { userId } = getAuth(request);
     if (!userId) {
-      return NextResponse.json("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const isAdmin = await authAdmin(userId);
     if (!isAdmin) {
       return NextResponse.json(
-        "Forbidden",
         { error: "Not authorized" },
         { status: 403 }
       );
@@ -81,10 +73,6 @@ export async function GET(request) {
     return NextResponse.json(stores, { status: 200 });
   } catch (error) {
     console.error("Error fetching pending stores:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }

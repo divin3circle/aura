@@ -7,12 +7,11 @@ export async function POST(request) {
   try {
     const { userId } = getAuth(request);
     if (!userId) {
-      return NextResponse.json("Unauthorized", { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const isAdmin = await authAdmin(userId);
     if (!isAdmin) {
       return NextResponse.json(
-        "Forbidden",
         { error: "Not authorized" },
         { status: 403 }
       );
@@ -20,7 +19,6 @@ export async function POST(request) {
     const { storeId } = await request.json();
     if (!storeId) {
       return NextResponse.json(
-        "Store ID and isActive status are required",
         { error: "MISSING_PARAMETERS" },
         { status: 400 }
       );
@@ -32,7 +30,6 @@ export async function POST(request) {
 
     if (!store) {
       return NextResponse.json(
-        "Store not found",
         { error: "STORE_NOT_FOUND" },
         { status: 404 }
       );
@@ -52,10 +49,6 @@ export async function POST(request) {
     );
   } catch (error) {
     console.error("Error toggling store status:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }
