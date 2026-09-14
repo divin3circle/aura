@@ -32,6 +32,9 @@ const OrderItem = ({ order }) => {
                   <p className="font-medium text-slate-600 text-base">
                     {item.product.name}
                   </p>
+                  {item.variantLabel && (
+                    <p className="text-xs text-slate-500">{item.variantLabel}</p>
+                  )}
                   <p>
                     {formatPrice(item.price)} Qty : {item.quantity}{" "}
                   </p>
