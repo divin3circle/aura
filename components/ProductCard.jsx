@@ -24,7 +24,12 @@ const ProductCard = ({ product }) => {
                         ))}
                     </div>
                 </div>
-                <p className='whitespace-nowrap'>{formatPrice(product.price)}</p>
+                <div className='text-right whitespace-nowrap'>
+                    <p>{formatPrice(product.price)}</p>
+                    {product.compareAtPrice && (
+                        <p className='text-xs text-slate-400 line-through'>{formatPrice(product.compareAtPrice)}</p>
+                    )}
+                </div>
             </div>
         </Link>
     )

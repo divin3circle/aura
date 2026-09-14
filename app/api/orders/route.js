@@ -2,7 +2,7 @@ import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { applyMargin, shippingFor } from "@/lib/pricing";
-import { variantLabel } from "@/lib/variants";
+import { activePricing, variantLabel } from "@/lib/variants";
 import axios from "axios";
 
 export async function POST(request) {
@@ -105,14 +105,17 @@ export async function POST(request) {
         );
       }
 
-      const unitBase = variant ? variant.price : product.price;
+      const source = variant ?? product;
+      const unitBase = applyMargin(source.price);
+      const unitDiscounted = source.discountedPrice == null ? null : applyMargin(source.discountedPrice);
+      const unitPrice = activePricing(unitBase, unitDiscounted).price;
       const label = variant ? variantLabel(variant, product.options) : null;
 
       if (!ordersByStore.has(storeId)) ordersByStore.set(storeId, []);
       ordersByStore.get(storeId).push({
         ...item,
         quantity,
-        price: applyMargin(unitBase),
+        price: unitPrice,
         variantId: variant ? variant.id : null,
         variantLabel: label,
       });

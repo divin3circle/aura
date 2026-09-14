@@ -25,9 +25,9 @@ const ProductDetails = ({ product }) => {
 
     const selectedVariant = hasVariants ? resolveVariant(variants, selected) : null;
     const activePrice = selectedVariant ? selectedVariant.price : product.price;
-    const activeMrp = selectedVariant ? selectedVariant.mrp : product.mrp;
+    const activeCompareAt = selectedVariant ? selectedVariant.compareAtPrice : product.compareAtPrice;
     const inStock = selectedVariant ? selectedVariant.inStock : product.inStock;
-    const hasDiscount = activeMrp > activePrice;
+    const hasDiscount = Boolean(activeCompareAt);
 
     const variantId = selectedVariant?.id ?? null;
     const inCart = Boolean(cart[cartLineKey(productId, variantId)]);
@@ -67,13 +67,13 @@ const ProductDetails = ({ product }) => {
                 <div className="flex items-start my-6 gap-3 text-2xl font-semibold text-slate-800">
                     <p>{formatPrice(activePrice)}</p>
                     {hasDiscount && (
-                        <p className="text-xl text-slate-500 line-through">{formatPrice(activeMrp)}</p>
+                        <p className="text-xl text-slate-500 line-through">{formatPrice(activeCompareAt)}</p>
                     )}
                 </div>
                 {hasDiscount && (
                     <div className="flex items-center gap-2 text-slate-500">
                         <TagIcon size={14} />
-                        <p>Save {((activeMrp - activePrice) / activeMrp * 100).toFixed(0)}% right now</p>
+                        <p>Save {((activeCompareAt - activePrice) / activeCompareAt * 100).toFixed(0)}% right now</p>
                     </div>
                 )}
 
