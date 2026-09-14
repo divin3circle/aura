@@ -132,7 +132,6 @@ export async function POST(request) {
     });
 
     return NextResponse.json(
-      "Product created successfully",
       { message: name + " added successfully" },
       { status: 201 }
     );
@@ -151,11 +150,7 @@ export async function GET(request) {
 
     const storeId = await authSeller(userId);
     if (!storeId) {
-      return NextResponse.json(
-        "Forbidden",
-        { error: "Not authorized" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     const products = await prisma.product.findMany({
       where: { storeId },
@@ -164,10 +159,6 @@ export async function GET(request) {
     return NextResponse.json(products, { status: 200 });
   } catch (error) {
     console.error("Error creating product:", error);
-    return NextResponse.json(
-      "Bad Request",
-      { error: error.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }
