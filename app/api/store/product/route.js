@@ -3,7 +3,7 @@ import authSeller from "@/middlewares/authSeller";
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { categoriesFor } from "@/lib/catalog";
+import { categoriesFor, departmentKeys } from "@/lib/catalog";
 
 export async function POST(request) {
   try {
@@ -31,7 +31,7 @@ export async function POST(request) {
     const brand = formData.get("brand") || null;
     const discountedPriceRaw = formData.get("discountedPrice");
     const discountedPrice =
-      discountedPriceRaw && discountedPriceRaw !== ""
+      discountedPriceRaw !== undefined && discountedPriceRaw !== null && discountedPriceRaw !== ""
         ? Number(discountedPriceRaw)
         : null;
 
@@ -69,6 +69,12 @@ export async function POST(request) {
         { error: "Missing required fields for product" },
         { status: 400 }
       );
+    }
+
+    // Validate department against the allow-list (only when explicitly provided)
+    const departmentProvided = formData.get("department");
+    if (departmentProvided && !departmentKeys.includes(department)) {
+      return NextResponse.json({ error: "Invalid department" }, { status: 400 });
     }
 
     // Validate category belongs to the given department
@@ -121,7 +127,7 @@ export async function POST(request) {
               price: Number(v.price),
               mrp: Number(v.mrp ?? v.price),
               discountedPrice:
-                v.discountedPrice && v.discountedPrice !== ""
+                v.discountedPrice !== undefined && v.discountedPrice !== null && v.discountedPrice !== ""
                   ? Number(v.discountedPrice)
                   : null,
               inStock: v.inStock !== undefined ? Boolean(v.inStock) : true,

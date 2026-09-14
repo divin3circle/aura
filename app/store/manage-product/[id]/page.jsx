@@ -31,7 +31,7 @@ export default function ManageProductPage() {
   const [discountedPrice, setDiscountedPrice] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Editable variant rows: [{ id, options, price (string), inStock }]
+  // Editable variant rows: [{ id, options, price (string), mrp (number|null), discountedPrice (number|null), inStock }]
   const [variantRows, setVariantRows] = useState([]);
   const [savingVariants, setSavingVariants] = useState(false);
 
@@ -54,6 +54,8 @@ export default function ManageProductPage() {
           id: v.id,
           options: v.options ?? {},
           price: String(v.price ?? ""),
+          mrp: v.mrp ?? null,
+          discountedPrice: v.discountedPrice ?? null,
           inStock: v.inStock !== false,
         }))
       );
@@ -148,7 +150,8 @@ export default function ManageProductPage() {
       const variants = variantRows.map((row) => ({
         options: row.options,
         price: Number(row.price),
-        mrp: Number(row.price),
+        mrp: row.mrp != null ? row.mrp : Number(row.price),
+        discountedPrice: row.discountedPrice ?? null,
         inStock: row.inStock,
       }));
       await axios.put(

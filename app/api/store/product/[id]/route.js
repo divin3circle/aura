@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getAuth } from "@clerk/nextjs/server";
 import prisma from "@/lib/prisma";
 import authSeller from "@/middlewares/authSeller";
-import { categoriesFor } from "@/lib/catalog";
+import { categoriesFor, departmentKeys } from "@/lib/catalog";
 
 export async function GET(request, { params }) {
   try {
@@ -120,6 +120,11 @@ export async function PUT(request, { params }) {
       options,
       variants,
     } = body;
+
+    // Validate department against the allow-list when provided
+    if (department !== undefined && !departmentKeys.includes(department)) {
+      return NextResponse.json({ error: "Invalid department" }, { status: 400 });
+    }
 
     // Validate category vs department when both are provided
     const effectiveDept = department ?? existing.department;
