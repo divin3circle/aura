@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useAuth, useUser } from "@clerk/nextjs";
 import axios from "axios";
@@ -31,7 +31,11 @@ export default function ManageProductPage() {
   const [discountedPrice, setDiscountedPrice] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const fetchProduct = async () => {
+  // Editable variant rows: [{ id, options, price (string), inStock }]
+  const [variantRows, setVariantRows] = useState([]);
+  const [savingVariants, setSavingVariants] = useState(false);
+
+  const fetchProduct = useCallback(async () => {
     try {
       const token = await getToken();
       const { data } = await axios.get(`/api/store/product/${id}`, {
@@ -44,6 +48,14 @@ export default function ManageProductPage() {
         data.product.discountedPrice != null
           ? String(data.product.discountedPrice)
           : ""
+      );
+      setVariantRows(
+        (data.product.variants ?? []).map((v) => ({
+          id: v.id,
+          options: v.options ?? {},
+          price: String(v.price ?? ""),
+          inStock: v.inStock !== false,
+        }))
       );
     } catch (error) {
       if (error.response?.status === 404) {
@@ -59,27 +71,27 @@ export default function ManageProductPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, getToken]);
 
   useEffect(() => {
     if (user && id) {
       fetchProduct();
     }
-  }, [user, id]);
+  }, [user, id, fetchProduct]);
 
-  const handleSaveDiscount = async (e) => {
-    e.preventDefault();
+  // Save a specific discount value (null clears). Shared by Save + Clear.
+  const saveDiscount = async (value) => {
     setSaving(true);
     try {
       const token = await getToken();
-      const payload = {
-        discountedPrice:
-          discountedPrice.trim() === "" ? null : Number(discountedPrice),
-      };
-      await axios.put(`/api/store/product/${id}`, payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      toast.success("Discount saved successfully");
+      await axios.put(
+        `/api/store/product/${id}`,
+        { discountedPrice: value },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(
+        value === null ? "Discount cleared" : "Discount saved successfully"
+      );
       await fetchProduct();
     } catch (error) {
       toast.error(
@@ -90,6 +102,71 @@ export default function ManageProductPage() {
       );
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveDiscount = async (e) => {
+    e.preventDefault();
+    const trimmed = discountedPrice.trim();
+    if (trimmed === "") {
+      await saveDiscount(null);
+      return;
+    }
+    const num = Number(trimmed);
+    if (!Number.isFinite(num) || num < 0) {
+      toast.error("Enter a valid discount amount (0 or more)");
+      return;
+    }
+    await saveDiscount(num);
+  };
+
+  const handleClearDiscount = async () => {
+    setDiscountedPrice("");
+    await saveDiscount(null);
+  };
+
+  const updateVariantRow = (rowId, field, value) => {
+    setVariantRows((rows) =>
+      rows.map((row) =>
+        row.id === rowId ? { ...row, [field]: value } : row
+      )
+    );
+  };
+
+  const handleSaveVariants = async () => {
+    // Validate all prices before sending.
+    for (const row of variantRows) {
+      const num = Number(row.price);
+      if (row.price === "" || !Number.isFinite(num) || num < 0) {
+        toast.error("Each variant needs a valid price (0 or more)");
+        return;
+      }
+    }
+    setSavingVariants(true);
+    try {
+      const token = await getToken();
+      const variants = variantRows.map((row) => ({
+        options: row.options,
+        price: Number(row.price),
+        mrp: Number(row.price),
+        inStock: row.inStock,
+      }));
+      await axios.put(
+        `/api/store/product/${id}`,
+        { variants },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success("Variant prices saved");
+      await fetchProduct();
+    } catch (error) {
+      toast.error(
+        "Failed to save variant prices" +
+          (error.response?.data?.error
+            ? `: ${error.response.data.error}`
+            : "")
+      );
+    } finally {
+      setSavingVariants(false);
     }
   };
 
@@ -202,67 +279,73 @@ export default function ManageProductPage() {
               </span>
             )}
           </div>
-          <div className="mt-2">
-            <Link
-              href={`/store/edit-product/${product.id}`}
-              className="text-xs bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded transition-colors"
-            >
-              Edit product
-            </Link>
-          </div>
         </div>
       </div>
 
-      {/* Variants */}
-      {product.variants && product.variants.length > 0 && (
+      {/* Variants — editable prices + stock */}
+      {variantRows.length > 0 && (
         <div className="border border-slate-200 rounded-lg p-5 mb-6">
-          <h3 className="font-medium text-slate-700 mb-3">Variants</h3>
+          <h3 className="font-medium text-slate-700 mb-1">Variant Prices</h3>
+          <p className="text-xs text-slate-400 mb-4">
+            Edit each variant&apos;s price and stock, then save. Saving replaces
+            the variant set.
+          </p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead className="bg-slate-50 text-gray-600 uppercase tracking-wider text-xs">
                 <tr>
                   <th className="px-3 py-2">Options</th>
                   <th className="px-3 py-2">Price</th>
-                  <th className="px-3 py-2">MRP</th>
-                  <th className="px-3 py-2">Discount</th>
                   <th className="px-3 py-2">In Stock</th>
                 </tr>
               </thead>
               <tbody className="text-slate-600">
-                {product.variants.map((variant) => (
+                {variantRows.map((row) => (
                   <tr
-                    key={variant.id}
+                    key={row.id}
                     className="border-t border-slate-100 hover:bg-slate-50"
                   >
                     <td className="px-3 py-2">
-                      {Object.entries(variant.options ?? {})
+                      {Object.entries(row.options ?? {})
                         .map(([k, v]) => `${k}: ${v}`)
                         .join(", ") || "—"}
                     </td>
-                    <td className="px-3 py-2">{formatPrice(variant.price)}</td>
                     <td className="px-3 py-2">
-                      {variant.mrp ? formatPrice(variant.mrp) : "—"}
-                    </td>
-                    <td className="px-3 py-2 text-green-600">
-                      {variant.discountedPrice != null
-                        ? formatPrice(variant.discountedPrice)
-                        : "—"}
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={row.price}
+                        onChange={(e) =>
+                          updateVariantRow(row.id, "price", e.target.value)
+                        }
+                        className="border border-slate-200 rounded px-2 py-1 text-sm w-28 focus:outline-none focus:ring-2 focus:ring-slate-300 text-slate-700"
+                      />
                     </td>
                     <td className="px-3 py-2">
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-xs ${
-                          variant.inStock
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-600"
-                        }`}
-                      >
-                        {variant.inStock ? "In stock" : "Out"}
-                      </span>
+                      <input
+                        type="checkbox"
+                        checked={row.inStock}
+                        onChange={(e) =>
+                          updateVariantRow(row.id, "inStock", e.target.checked)
+                        }
+                        className="w-4 h-4 accent-green-600 cursor-pointer"
+                      />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={handleSaveVariants}
+              disabled={savingVariants}
+              className="bg-slate-800 text-white text-sm px-5 py-2 rounded hover:bg-slate-700 transition-colors disabled:opacity-50"
+            >
+              {savingVariants ? "Saving…" : "Save variant prices"}
+            </button>
           </div>
         </div>
       )}
@@ -313,9 +396,7 @@ export default function ManageProductPage() {
             <button
               type="button"
               disabled={saving}
-              onClick={() => {
-                setDiscountedPrice("");
-              }}
+              onClick={handleClearDiscount}
               className="text-sm text-red-500 hover:text-red-700 px-3 py-2 underline disabled:opacity-50"
             >
               Clear
