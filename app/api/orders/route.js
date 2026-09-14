@@ -70,20 +70,48 @@ export async function POST(request) {
     const ordersByStore = new Map();
 
     for (const item of items) {
+      const quantity = Number(item.quantity);
+      if (!Number.isInteger(quantity) || quantity < 1) {
+        return NextResponse.json(
+          "Invalid quantity",
+          { error: "Invalid quantity" },
+          { status: 400 }
+        );
+      }
+
       const product = await prisma.product.findUnique({
         where: { id: item.id },
         include: { variants: true },
       });
+
+      if (!product) {
+        return NextResponse.json(
+          "Product not found",
+          { error: "Product not found" },
+          { status: 400 }
+        );
+      }
+
       const storeId = product.storeId;
       const variant = item.variantId
         ? product.variants.find((v) => v.id === item.variantId)
         : null;
+
+      if (product.variants.length > 0 && !variant) {
+        return NextResponse.json(
+          "Please select a variant",
+          { error: "Please select a variant" },
+          { status: 400 }
+        );
+      }
+
       const unitBase = variant ? variant.price : product.price;
       const label = variant ? variantLabel(variant, product.options) : null;
 
       if (!ordersByStore.has(storeId)) ordersByStore.set(storeId, []);
       ordersByStore.get(storeId).push({
         ...item,
+        quantity,
         price: applyMargin(unitBase),
         variantId: variant ? variant.id : null,
         variantLabel: label,
