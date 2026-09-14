@@ -2,31 +2,46 @@
 
 import { addToCart } from "@/lib/features/cart/cartSlice";
 import { formatPrice } from "@/lib/utils";
-import { StarIcon, TagIcon, EarthIcon, CreditCardIcon, UserIcon } from "lucide-react";
+import { resolveVariant, cheapestVariant, cartLineKey } from "@/lib/variants";
+import { StarIcon, TagIcon, EarthIcon, CreditCardIcon, UserIcon, MinusIcon, PlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Image from "next/image";
-import Counter from "./Counter";
 import { useDispatch, useSelector } from "react-redux";
 
 const ProductDetails = ({ product }) => {
-
     const productId = product.id;
-    const hasDiscount = product.mrp > product.price;
+    const options = product.options || [];
+    const variants = product.variants || [];
+    const hasVariants = variants.length > 0;
 
     const cart = useSelector(state => state.cart.cartItems);
     const dispatch = useDispatch();
-
-    const router = useRouter()
+    const router = useRouter();
 
     const [mainImage, setMainImage] = useState(product.images[0]);
+    const [selected, setSelected] = useState(() => (hasVariants ? (cheapestVariant(variants)?.options ?? {}) : {}));
+    const [quantity, setQuantity] = useState(1);
 
-    const addToCartHandler = () => {
-        dispatch(addToCart({ productId }))
-    }
+    const selectedVariant = hasVariants ? resolveVariant(variants, selected) : null;
+    const activePrice = selectedVariant ? selectedVariant.price : product.price;
+    const activeMrp = selectedVariant ? selectedVariant.mrp : product.mrp;
+    const inStock = selectedVariant ? selectedVariant.inStock : product.inStock;
+    const hasDiscount = activeMrp > activePrice;
 
-    const averageRating = product.rating.reduce((acc, item) => acc + item.rating, 0) / product.rating.length;
-    
+    const variantId = selectedVariant?.id ?? null;
+    const inCart = Boolean(cart[cartLineKey(productId, variantId)]);
+    const canAdd = inStock && (!hasVariants || Boolean(selectedVariant));
+
+    const isValue = (axis, value) => {
+        const v = resolveVariant(variants, { ...selected, [axis]: value });
+        return { exists: Boolean(v), inStock: Boolean(v?.inStock) };
+    };
+
+    const averageRating = product.rating.length
+        ? product.rating.reduce((acc, item) => acc + item.rating, 0) / product.rating.length
+        : 0;
+
     return (
         <div className="flex max-lg:flex-col gap-12">
             <div className="flex max-sm:flex-col-reverse gap-3">
@@ -50,37 +65,64 @@ const ProductDetails = ({ product }) => {
                     <p className="text-sm ml-3 text-slate-500">{product.rating.length} Reviews</p>
                 </div>
                 <div className="flex items-start my-6 gap-3 text-2xl font-semibold text-slate-800">
-                    <p>{formatPrice(product.price)}</p>
+                    <p>{formatPrice(activePrice)}</p>
                     {hasDiscount && (
-                        <p className="text-xl text-slate-500 line-through">{formatPrice(product.mrp)}</p>
+                        <p className="text-xl text-slate-500 line-through">{formatPrice(activeMrp)}</p>
                     )}
                 </div>
                 {hasDiscount && (
                     <div className="flex items-center gap-2 text-slate-500">
                         <TagIcon size={14} />
-                        <p>Save {((product.mrp - product.price) / product.mrp * 100).toFixed(0)}% right now</p>
+                        <p>Save {((activeMrp - activePrice) / activeMrp * 100).toFixed(0)}% right now</p>
                     </div>
                 )}
-                <div className="flex items-end gap-5 mt-10">
-                    {
-                        cart[productId] && (
-                            <div className="flex flex-col gap-3">
-                                <p className="text-lg text-slate-800 font-semibold">Quantity</p>
-                                <Counter productId={productId} />
-                            </div>
-                        )
-                    }
-                    <button onClick={() => !cart[productId] ? addToCartHandler() : router.push('/cart')} className="bg-slate-800 text-white px-10 py-3 text-sm font-medium rounded hover:bg-slate-900 active:scale-95 transition">
-                        {!cart[productId] ? 'Add to Cart' : 'View Cart'}
+
+                {options.map((opt) => (
+                    <div key={opt.name} className="mt-6">
+                        <p className="text-sm font-medium text-slate-700 mb-2">{opt.name}</p>
+                        <div className="flex flex-wrap gap-2">
+                            {opt.values.map((value) => {
+                                const { exists, inStock: vInStock } = isValue(opt.name, value);
+                                const isSelected = selected[opt.name] === value;
+                                return (
+                                    <button
+                                        key={value}
+                                        type="button"
+                                        disabled={!exists}
+                                        onClick={() => setSelected({ ...selected, [opt.name]: value })}
+                                        className={`px-4 py-2 rounded border text-sm transition ${isSelected ? 'border-slate-800 bg-slate-800 text-white' : 'border-slate-300 text-slate-700 hover:border-slate-500'} ${!exists ? 'opacity-40 cursor-not-allowed line-through' : ''} ${exists && !vInStock ? 'opacity-60' : ''}`}
+                                    >
+                                        {value}{exists && !vInStock ? ' (out of stock)' : ''}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ))}
+
+                <div className="flex items-end gap-5 mt-8">
+                    <div className="flex flex-col gap-2">
+                        <p className="text-sm font-medium text-slate-700">Quantity</p>
+                        <div className="inline-flex items-center gap-3 px-3 py-2 rounded border border-slate-200 text-slate-600">
+                            <button type="button" onClick={() => setQuantity(q => Math.max(1, q - 1))} className="p-1 select-none"><MinusIcon size={16} /></button>
+                            <p className="w-6 text-center">{quantity}</p>
+                            <button type="button" onClick={() => setQuantity(q => q + 1)} className="p-1 select-none"><PlusIcon size={16} /></button>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => inCart ? router.push('/cart') : dispatch(addToCart({ productId, variantId, quantity }))}
+                        disabled={!inCart && !canAdd}
+                        className="bg-slate-800 text-white px-10 py-3 text-sm font-medium rounded hover:bg-slate-900 active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {inCart ? 'View Cart' : (canAdd ? 'Add to Cart' : 'Unavailable')}
                     </button>
                 </div>
                 <hr className="border-gray-300 my-5" />
                 <div className="flex flex-col gap-4 text-slate-500">
-                    <p className="flex gap-3"> <EarthIcon className="text-slate-400" /> Free shipping worldwide </p>
-                    <p className="flex gap-3"> <CreditCardIcon className="text-slate-400" /> 100% Secured Payment </p>
-                    <p className="flex gap-3"> <UserIcon className="text-slate-400" /> Trusted by top brands </p>
+                    <p className="flex gap-3"> <EarthIcon className="text-slate-400" /> Fast delivery across Kenya </p>
+                    <p className="flex gap-3"> <CreditCardIcon className="text-slate-400" /> Secure payment via Paystack </p>
+                    <p className="flex gap-3"> <UserIcon className="text-slate-400" /> Authentic Korean brands </p>
                 </div>
-
             </div>
         </div>
     )
