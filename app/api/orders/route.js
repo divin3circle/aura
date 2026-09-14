@@ -2,6 +2,7 @@ import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { applyMargin, shippingFor } from "@/lib/pricing";
+import { variantLabel } from "@/lib/variants";
 import axios from "axios";
 
 export async function POST(request) {
@@ -71,14 +72,22 @@ export async function POST(request) {
     for (const item of items) {
       const product = await prisma.product.findUnique({
         where: { id: item.id },
+        include: { variants: true },
       });
       const storeId = product.storeId;
+      const variant = item.variantId
+        ? product.variants.find((v) => v.id === item.variantId)
+        : null;
+      const unitBase = variant ? variant.price : product.price;
+      const label = variant ? variantLabel(variant, product.options) : null;
 
-      if (!ordersByStore.has(storeId)) {
-        ordersByStore.set(storeId, []);
-      }
-      // Charge the margin-adjusted price (base price in DB × MARGIN).
-      ordersByStore.get(storeId).push({ ...item, price: applyMargin(product.price) });
+      if (!ordersByStore.has(storeId)) ordersByStore.set(storeId, []);
+      ordersByStore.get(storeId).push({
+        ...item,
+        price: applyMargin(unitBase),
+        variantId: variant ? variant.id : null,
+        variantLabel: label,
+      });
     }
 
     let orderIds = [];
@@ -122,6 +131,8 @@ export async function POST(request) {
               productId: item.id,
               quantity: item.quantity,
               price: item.price,
+              variantId: item.variantId ?? null,
+              variantLabel: item.variantLabel ?? null,
             })),
           },
         },
