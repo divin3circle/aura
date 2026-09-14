@@ -171,8 +171,61 @@ Touch points:
   (none / single / multi), cart with two variants of one product, checkout.
 - Backward-compat: a no-variant product still adds to cart and checks out.
 
+## Taxonomy: departments, subcategories, brands (addendum 2026-09-14)
+
+The store now sells both **cosmetics** and **electronics** from a **single
+`Product` model** (a separate electronics model was rejected — it would
+duplicate the entire cart/order/variant/pricing/admin pipeline for no gain;
+the two types differ only in taxonomy + a few attributes, and the variant
+system already covers both: cosmetics `Size`, electronics `Storage × Colour`).
+
+Add to `Product`:
+- **`department`** — enum `Department { COSMETICS, ELECTRONICS }`, default `COSMETICS`.
+- **`brand`** — `String?` (e.g. "COSRX", "Samsung", "Apple").
+- **`category`** (existing) becomes the **department-scoped subcategory**.
+
+Taxonomy lives in one config, `lib/catalog.js`:
+```js
+export const DEPARTMENTS = {
+  COSMETICS: {
+    label: "Cosmetics",
+    categories: ["Skincare","Masks","Fragrances","Sunscreen","Cleansers","Toners","Serums","Makeup","Haircare"],
+    brands: ["COSRX","Innisfree","MISSHA","SKIN1004","AXIS-Y","AHC","Centellian24"],
+  },
+  ELECTRONICS: {
+    label: "Electronics",
+    categories: ["Mobile Phones","Smartwatches","Laptops","Tablets","Earbuds","Accessories"],
+    brands: ["Apple","Samsung","Xiaomi","Oppo","Google"],
+  },
+};
+```
+
+Admin add/edit product cascade: **Department → Category (filtered) → Brand
+(department dropdown + "Other" free text)**. Server validates `category`
+belongs to `department`; `brand` is free (dropdown is a convenience).
+
+Migration is additive: `department` enum column (default COSMETICS), `brand`
+text nullable. Backfill: existing 30 products → `COSMETICS`, and `brand`
+inferred from their names (COSRX / Innisfree / MISSHA / SKIN1004 / AXIS-Y /
+AHC / Centellian24).
+
+This taxonomy also unblocks a future **storefront browse/filter by
+department / category / brand** (Phase 5, optional).
+
+### Revised phases
+1. Schema + backend (DONE) — variant model, `/api/products` from-price.
+2. Product page — variant selectors + quantity stepper.
+3. Cart + checkout — variant-aware cart line keying + `OrderItem` PK includes
+   `variantId`; reconcile cart preview + `/api/orders` charge to the resolved
+   variant price.
+4. Admin editor + taxonomy — Department → Category → Brand cascade + variant
+   editor; add `department`/`brand` schema + backfill.
+5. (Optional) Storefront browse/filter by department/category/brand.
+
 ## Open questions resolved
 
 - Stock granularity: **in/out** per variant (not counts).
 - Variant images: **shared** with the product.
 - Combination coverage: **explicit** variant rows (partial matrices allowed).
+- Cosmetics vs electronics: **one Product model** + `department`/`brand` (no separate model).
+- Brand input: **dropdown + "Other"** free text.
