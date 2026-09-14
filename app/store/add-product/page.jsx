@@ -5,26 +5,23 @@ import { useState } from "react";
 import { toast } from "react-hot-toast";
 import { useAuth } from "@clerk/nextjs";
 import axios from "axios";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { IconAi, IconBrandParsinta } from "@tabler/icons-react";
+import { IconAi } from "@tabler/icons-react";
+import {
+  DEPARTMENTS,
+  departmentKeys,
+  categoriesFor,
+  brandsFor,
+} from "@/lib/catalog";
 
+// Flat list of all categories across all departments — kept for CategoriesMarquee compatibility
 export const categories = [
-  "Skincare",
-  "Makeup",
-  "Haircare",
-  "Fragrances",
-  "Hygiene",
-  "Bath",
-  "Nails",
-  "Accessories",
-  "Grooming",
-  "Sunscreen",
-  "Wellness",
-  "Supplements",
-  "Others",
+  ...new Set(departmentKeys.flatMap((d) => categoriesFor(d))),
 ];
+
+const newVariantRow = () => ({ value: "", price: "", inStock: true });
 
 export default function StoreAddProduct() {
   const { getToken } = useAuth();
@@ -38,8 +35,18 @@ export default function StoreAddProduct() {
     description: "",
     mrp: 0,
     price: 0,
+    department: "",
     category: "",
+    brand: "",
+    brandOther: "",
+    discountedPrice: "",
   });
+
+  // Variant editor state
+  const [hasVariants, setHasVariants] = useState(false);
+  const [axisName, setAxisName] = useState("Size");
+  const [variantRows, setVariantRows] = useState([newVariantRow()]);
+
   const [loading, setLoading] = useState(false);
   const [aiUsed, setAiUsed] = useState(false);
   const [imageGenerationConsent, setImageGenerationConsent] = useState(false);
@@ -48,6 +55,29 @@ export default function StoreAddProduct() {
     setProductInfo({ ...productInfo, [e.target.name]: e.target.value });
   };
 
+  const onDepartmentChange = (e) => {
+    setProductInfo({
+      ...productInfo,
+      department: e.target.value,
+      category: "",
+      brand: "",
+      brandOther: "",
+    });
+  };
+
+  // --- Variant row helpers ---
+  const updateVariantRow = (index, field, value) => {
+    setVariantRows((prev) =>
+      prev.map((row, i) => (i === index ? { ...row, [field]: value } : row))
+    );
+  };
+
+  const addVariantRow = () => setVariantRows((prev) => [...prev, newVariantRow()]);
+
+  const removeVariantRow = (index) =>
+    setVariantRows((prev) => prev.filter((_, i) => i !== index));
+
+  // --- Image upload ---
   const handleImageUpload = async (key, file) => {
     setImages((prev) => ({ ...prev, [key]: file }));
 
@@ -63,15 +93,8 @@ export default function StoreAddProduct() {
           await toast.promise(
             axios.post(
               "/api/store/ai",
-              {
-                image: base64String,
-                mimeType: mimeType,
-              },
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              }
+              { image: base64String, mimeType },
+              { headers: { Authorization: `Bearer ${token}` } }
             ),
             {
               loading: "Analyzing image for product details...",
@@ -99,6 +122,7 @@ export default function StoreAddProduct() {
     }
   };
 
+  // --- Submit ---
   const onSubmitHandler = async (e) => {
     e.preventDefault();
     try {
@@ -113,17 +137,50 @@ export default function StoreAddProduct() {
       formData.append("description", productInfo.description);
       formData.append("mrp", productInfo.mrp);
       formData.append("price", productInfo.price);
-      formData.append("category", productInfo.category);
 
-      // Handle both uploaded files and AI-generated image URLs
+      // Taxonomy
+      formData.append("department", productInfo.department);
+      formData.append("category", productInfo.category);
+      const resolvedBrand =
+        productInfo.brand === "Other"
+          ? productInfo.brandOther
+          : productInfo.brand;
+      formData.append("brand", resolvedBrand);
+
+      // Optional discount
+      formData.append("discountedPrice", productInfo.discountedPrice ?? "");
+
+      // Variants
+      let options = [];
+      let variants = [];
+      if (hasVariants && variantRows.length > 0) {
+        const validRows = variantRows.filter(
+          (r) => r.value.trim() !== "" && r.price !== ""
+        );
+        if (validRows.length > 0) {
+          options = [
+            {
+              name: axisName,
+              values: validRows.map((r) => r.value.trim()),
+            },
+          ];
+          variants = validRows.map((r) => ({
+            options: { [axisName]: r.value.trim() },
+            price: parseFloat(r.price),
+            mrp: parseFloat(r.price),
+            inStock: r.inStock,
+          }));
+        }
+      }
+      formData.append("options", JSON.stringify(options));
+      formData.append("variants", JSON.stringify(variants));
+
+      // Images
       for (let i = 1; i <= 4; i++) {
         if (images[i]) {
           if (images[i] instanceof File) {
-            // It's an uploaded file
             formData.append("images", images[i]);
           } else if (typeof images[i] === "string") {
-            // It's an AI-generated image URL
-            // Fetch the image and convert to blob
             const response = await fetch(images[i]);
             const blob = await response.blob();
             const file = new File([blob], `ai-generated-image-${i}.png`, {
@@ -134,22 +191,28 @@ export default function StoreAddProduct() {
         }
       }
 
-      const { data } = await axios.post("/api/store/product", formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      await axios.post("/api/store/product", formData, {
+        headers: { Authorization: `Bearer ${token}` },
       });
+
       toast.success(productInfo.name + " added successfully");
       setProductInfo({
         name: "",
         description: "",
         mrp: 0,
         price: 0,
+        department: "",
         category: "",
+        brand: "",
+        brandOther: "",
+        discountedPrice: "",
       });
       setImages({ 1: null, 2: null, 3: null, 4: null });
       setImagesGenerated(false);
       setImageGenerationConsent(false);
+      setHasVariants(false);
+      setAxisName("Size");
+      setVariantRows([newVariantRow()]);
     } catch (error) {
       console.error("Error adding product:", error);
       toast.error(
@@ -181,27 +244,18 @@ export default function StoreAddProduct() {
               "/api/store/ai/images",
               {
                 image: base64String,
-                mimeType: mimeType,
+                mimeType,
                 productName: productInfo.name || "Product",
               },
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-              }
+              { headers: { Authorization: `Bearer ${token}` } }
             ),
             {
               loading: "Generating AI product images from different angles...",
               success: (res) => {
                 const imageBase64Array = res.data.images;
                 if (imageBase64Array && imageBase64Array.length === 1) {
-                  // Convert base64 string to data URL for display
                   const imageDataUrl = `data:image/png;base64,${imageBase64Array[0]}`;
-                  // Store generated image in slot 2
-                  setImages((prev) => ({
-                    ...prev,
-                    2: imageDataUrl,
-                  }));
+                  setImages((prev) => ({ ...prev, 2: imageDataUrl }));
                   setImagesGenerated(true);
                   return "Product image generated successfully!";
                 }
@@ -224,6 +278,9 @@ export default function StoreAddProduct() {
     }
   };
 
+  const currentBrands = brandsFor(productInfo.department);
+  const currentCategories = categoriesFor(productInfo.department);
+
   return (
     <form
       onSubmit={(e) =>
@@ -236,7 +293,8 @@ export default function StoreAddProduct() {
       </h1>
       <p className="mt-7">Product Images</p>
 
-      <div htmlFor="" className="flex gap-3 mt-4">
+      {/* Image upload row */}
+      <div className="flex gap-3 mt-4">
         {Object.keys(images).map((key) => (
           <label key={key} htmlFor={`images${key}`}>
             <Image
@@ -245,7 +303,9 @@ export default function StoreAddProduct() {
               className="h-15 w-auto border border-slate-200 rounded cursor-pointer"
               src={
                 images[key]
-                  ? URL.createObjectURL(images[key])
+                  ? images[key] instanceof File
+                    ? URL.createObjectURL(images[key])
+                    : images[key]
                   : assets.upload_area
               }
               alt=""
@@ -260,6 +320,8 @@ export default function StoreAddProduct() {
           </label>
         ))}
       </div>
+
+      {/* AI image generation */}
       {!imagesGenerated && (
         <div className="mt-8">
           <div className="flex items-center gap-3 mb-3">
@@ -304,7 +366,7 @@ export default function StoreAddProduct() {
       {imagesGenerated && (
         <div className="mt-8 p-3 bg-green-50 border border-green-200 rounded-lg">
           <p className="text-green-700 text-sm font-medium">
-            ✓ AI image generated successfully! You now have 1 original + 1 AI
+            AI image generated successfully! You now have 1 original + 1 AI
             generated image ready to submit.
           </p>
           <button
@@ -321,7 +383,8 @@ export default function StoreAddProduct() {
         </div>
       )}
 
-      <label htmlFor="" className="flex flex-col gap-2 my-6 ">
+      {/* Name */}
+      <label className="flex flex-col gap-2 my-6">
         Name
         <input
           type="text"
@@ -334,7 +397,8 @@ export default function StoreAddProduct() {
         />
       </label>
 
-      <label htmlFor="" className="flex flex-col gap-2 my-6 ">
+      {/* Description */}
+      <label className="flex flex-col gap-2 my-6">
         Description
         <textarea
           name="description"
@@ -347,52 +411,228 @@ export default function StoreAddProduct() {
         />
       </label>
 
-      <div className="flex gap-5">
-        <label htmlFor="" className="flex flex-col gap-2 ">
-          Actual Price ($)
+      {/* Department → Category → Brand cascade */}
+      <div className="flex flex-col gap-4 my-6 max-w-sm">
+        {/* Department */}
+        <div className="flex flex-col gap-2">
+          <label className="text-sm">Department</label>
+          <select
+            value={productInfo.department}
+            onChange={onDepartmentChange}
+            className="w-full p-2 px-4 outline-none border border-slate-200 rounded"
+            required
+          >
+            <option value="">Select a department</option>
+            {departmentKeys.map((d) => (
+              <option key={d} value={d}>
+                {DEPARTMENTS[d].label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Category — filtered by department */}
+        <div className="flex flex-col gap-2">
+          <label className="text-sm">Category</label>
+          <select
+            value={productInfo.category}
+            onChange={(e) =>
+              setProductInfo({ ...productInfo, category: e.target.value })
+            }
+            className="w-full p-2 px-4 outline-none border border-slate-200 rounded"
+            required
+            disabled={!productInfo.department}
+          >
+            <option value="">
+              {productInfo.department
+                ? "Select a category"
+                : "Select a department first"}
+            </option>
+            {currentCategories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Brand — filtered by department + Other option */}
+        <div className="flex flex-col gap-2">
+          <label className="text-sm">Brand</label>
+          <select
+            value={productInfo.brand}
+            onChange={(e) =>
+              setProductInfo({
+                ...productInfo,
+                brand: e.target.value,
+                brandOther: "",
+              })
+            }
+            className="w-full p-2 px-4 outline-none border border-slate-200 rounded"
+            disabled={!productInfo.department}
+          >
+            <option value="">
+              {productInfo.department
+                ? "Select a brand"
+                : "Select a department first"}
+            </option>
+            {currentBrands.map((b) => (
+              <option key={b} value={b}>
+                {b}
+              </option>
+            ))}
+            <option value="Other">Other</option>
+          </select>
+          {productInfo.brand === "Other" && (
+            <input
+              type="text"
+              name="brandOther"
+              value={productInfo.brandOther}
+              onChange={onChangeHandler}
+              placeholder="Enter brand name"
+              className="w-full p-2 px-4 outline-none border border-slate-200 rounded"
+              required
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Base pricing */}
+      <div className="flex gap-5 my-6">
+        <label className="flex flex-col gap-2">
+          Actual Price (KES)
           <input
             type="number"
             name="mrp"
             onChange={onChangeHandler}
             value={productInfo.mrp}
             placeholder="0"
-            rows={5}
-            className="w-full max-w-45 p-2 px-4 outline-none border border-slate-200 rounded resize-none"
+            className="w-full max-w-45 p-2 px-4 outline-none border border-slate-200 rounded"
             required
           />
         </label>
-        <label htmlFor="" className="flex flex-col gap-2 ">
-          Offer Price ($)
+        <label className="flex flex-col gap-2">
+          Offer Price (KES)
           <input
             type="number"
             name="price"
             onChange={onChangeHandler}
             value={productInfo.price}
             placeholder="0"
-            rows={5}
-            className="w-full max-w-45 p-2 px-4 outline-none border border-slate-200 rounded resize-none"
+            className="w-full max-w-45 p-2 px-4 outline-none border border-slate-200 rounded"
             required
           />
         </label>
       </div>
 
-      <select
-        onChange={(e) =>
-          setProductInfo({ ...productInfo, category: e.target.value })
-        }
-        value={productInfo.category}
-        className="w-full max-w-sm p-2 px-4 my-6 outline-none border border-slate-200 rounded"
-        required
-      >
-        <option value="">Select a category</option>
-        {categories.map((category) => (
-          <option key={category} value={category}>
-            {category}
-          </option>
-        ))}
-      </select>
+      {/* Optional product-level discounted price */}
+      <label className="flex flex-col gap-2 my-6 max-w-sm">
+        Discounted Price (optional, KES)
+        <input
+          type="number"
+          name="discountedPrice"
+          onChange={onChangeHandler}
+          value={productInfo.discountedPrice}
+          placeholder="Leave blank if no extra discount"
+          className="w-full p-2 px-4 outline-none border border-slate-200 rounded"
+        />
+      </label>
 
-      <br />
+      {/* Variant / size editor */}
+      <div className="my-6 max-w-lg">
+        <div className="flex items-center gap-3 mb-4">
+          <Checkbox
+            id="has-variants"
+            checked={hasVariants}
+            onCheckedChange={(checked) => {
+              setHasVariants(!!checked);
+              if (!checked) {
+                setVariantRows([newVariantRow()]);
+                setAxisName("Size");
+              }
+            }}
+          />
+          <Label htmlFor="has-variants" className="text-sm cursor-pointer">
+            This product has sizes / options
+          </Label>
+        </div>
+
+        {hasVariants && (
+          <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
+            {/* Axis name */}
+            <label className="flex flex-col gap-1 mb-4 max-w-xs">
+              <span className="text-sm">Option axis name</span>
+              <input
+                type="text"
+                value={axisName}
+                onChange={(e) => setAxisName(e.target.value)}
+                placeholder="e.g. Size, Color, Volume"
+                className="p-2 px-4 outline-none border border-slate-200 rounded bg-white"
+              />
+            </label>
+
+            {/* Variant rows */}
+            <div className="flex flex-col gap-3">
+              {variantRows.map((row, idx) => (
+                <div key={idx} className="flex items-center gap-2 flex-wrap">
+                  <input
+                    type="text"
+                    value={row.value}
+                    onChange={(e) =>
+                      updateVariantRow(idx, "value", e.target.value)
+                    }
+                    placeholder={`${axisName} value (e.g. S, M, L)`}
+                    className="p-2 px-3 outline-none border border-slate-200 rounded bg-white text-sm w-36"
+                  />
+                  <input
+                    type="number"
+                    value={row.price}
+                    onChange={(e) =>
+                      updateVariantRow(idx, "price", e.target.value)
+                    }
+                    placeholder="Price (KES)"
+                    className="p-2 px-3 outline-none border border-slate-200 rounded bg-white text-sm w-32"
+                  />
+                  <div className="flex items-center gap-1">
+                    <Checkbox
+                      id={`instock-${idx}`}
+                      checked={row.inStock}
+                      onCheckedChange={(checked) =>
+                        updateVariantRow(idx, "inStock", !!checked)
+                      }
+                    />
+                    <Label
+                      htmlFor={`instock-${idx}`}
+                      className="text-xs cursor-pointer"
+                    >
+                      In stock
+                    </Label>
+                  </div>
+                  {variantRows.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeVariantRow(idx)}
+                      className="text-red-400 hover:text-red-600 transition"
+                      title="Remove row"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={addVariantRow}
+              className="mt-3 flex items-center gap-1 text-sm text-slate-600 hover:text-slate-800 transition"
+            >
+              <Plus className="h-4 w-4" />
+              Add option
+            </button>
+          </div>
+        )}
+      </div>
 
       <button
         disabled={loading}
@@ -405,7 +645,7 @@ export default function StoreAddProduct() {
         )}
       </button>
       <p className="text-sm text-muted-foreground mt-4">
-        *AI Generated content maybe inaccurate.
+        *AI Generated content may be inaccurate.
       </p>
     </form>
   );

@@ -1,4 +1,8 @@
-import { categories } from "@/app/store/add-product/page";
+import { departmentKeys, categoriesFor } from "@/lib/catalog";
+
+const categories = [
+  ...new Set(departmentKeys.flatMap((d) => categoriesFor(d))),
+];
 
 const CategoriesMarquee = () => {
   return (
