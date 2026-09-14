@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { applyMargin } from "@/lib/pricing";
+import { withDisplayPricing } from "@/lib/variants";
 import { NextResponse } from "next/server";
 
 export async function GET(request) {
@@ -21,6 +21,7 @@ export async function GET(request) {
           },
         },
         store: true,
+        variants: true,
       },
       orderBy: {
         createdAt: "desc",
@@ -28,12 +29,7 @@ export async function GET(request) {
     });
     products = products
       .filter((product) => product.store.isActive)
-      // Apply the global margin to every base price before it reaches the client.
-      .map((product) => ({
-        ...product,
-        mrp: applyMargin(product.mrp),
-        price: applyMargin(product.price),
-      }));
+      .map(withDisplayPricing);
     return NextResponse.json({ products }, { status: 200 });
   } catch (error) {
     console.error("Error fetching products:", error);
