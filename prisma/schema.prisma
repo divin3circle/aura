@@ -29,6 +29,7 @@ model Product {
     id          String   @id @default(cuid())
     name        String
     subtitle    String   @default("")
+    options     Json     @default("[]")
     description String
     mrp         Float
     price       Float
@@ -40,9 +41,25 @@ model Product {
     updatedAt   DateTime @updatedAt
 
     // Relations
-    store      Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+    store      Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
     orderItems OrderItem[]
     rating     Rating[]
+    variants   ProductVariant[]
+}
+
+model ProductVariant {
+    id        String   @id @default(cuid())
+    productId String
+    options   Json
+    price     Float
+    mrp       Float
+    inStock   Boolean  @default(true)
+    sku       String?
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+    orderItems OrderItem[]
 }
 
 enum OrderStatus {
@@ -83,14 +100,17 @@ model Order {
 
 // Required for creating an OrderItem: orderId, productId, quantity, price
 model OrderItem {
-    orderId   String
-    productId String
-    quantity  Int
-    price     Float
+    orderId      String
+    productId    String
+    quantity     Int
+    price        Float
+    variantId    String?
+    variantLabel String?
 
     // Relations
-    order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-    product Product @relation(fields: [productId], references: [id])
+    order   Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+    product Product         @relation(fields: [productId], references: [id])
+    variant ProductVariant? @relation(fields: [variantId], references: [id])
 
     @@id([orderId, productId])
 }
