@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import Image from "next/image";
+import Link from "next/link";
 import Loading from "@/components/Loading";
 import { useAuth, useUser } from "@clerk/nextjs";
 import axios from "axios";
@@ -95,7 +96,10 @@ export default function StoreManageProducts() {
               className="border-t border-gray-200 hover:bg-gray-50"
             >
               <td className="px-4 py-3">
-                <div className="flex gap-2 items-center">
+                <Link
+                  href={`/store/manage-product/${product.id}`}
+                  className="flex gap-2 items-center hover:text-slate-900 group"
+                >
                   <Image
                     width={40}
                     height={40}
@@ -103,8 +107,8 @@ export default function StoreManageProducts() {
                     src={product.images[0]}
                     alt=""
                   />
-                  {product.name}
-                </div>
+                  <span className="group-hover:underline">{product.name}</span>
+                </Link>
               </td>
               <td className="px-4 py-3 max-w-md text-slate-600 hidden md:table-cell truncate">
                 {product.description}
@@ -115,21 +119,29 @@ export default function StoreManageProducts() {
               <td className="px-4 py-3">
                 {formatPrice(product.price)}
               </td>
-              <td className="px-4 py-3 text-center">
-                <label className="relative inline-flex items-center cursor-pointer text-gray-900 gap-3">
-                  <input
-                    type="checkbox"
-                    className="sr-only peer"
-                    onChange={() =>
-                      toast.promise(toggleStock(product.id), {
-                        loading: "Updating data...",
-                      })
-                    }
-                    checked={product.inStock}
-                  />
-                  <div className="w-9 h-5 bg-slate-300 rounded-full peer peer-checked:bg-green-600 transition-colors duration-200"></div>
-                  <span className="dot absolute left-1 top-1 w-3 h-3 bg-white rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-4"></span>
-                </label>
+              <td className="px-4 py-3">
+                <div className="flex items-center gap-3 justify-center">
+                  <label className="relative inline-flex items-center cursor-pointer text-gray-900 gap-3">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      onChange={() =>
+                        toast.promise(toggleStock(product.id), {
+                          loading: "Updating data...",
+                        })
+                      }
+                      checked={product.inStock}
+                    />
+                    <div className="w-9 h-5 bg-slate-300 rounded-full peer peer-checked:bg-green-600 transition-colors duration-200"></div>
+                    <span className="dot absolute left-1 top-1 w-3 h-3 bg-white rounded-full transition-transform duration-200 ease-in-out peer-checked:translate-x-4"></span>
+                  </label>
+                  <Link
+                    href={`/store/manage-product/${product.id}`}
+                    className="text-xs bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded transition-colors whitespace-nowrap"
+                  >
+                    Manage
+                  </Link>
+                </div>
               </td>
             </tr>
           ))}
