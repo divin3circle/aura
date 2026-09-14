@@ -1,12 +1,16 @@
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import authAdmin from "@/middlewares/authAdmin";
 
 export async function GET(request) {
   try {
     const { userId } = getAuth(request);
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!(await authAdmin(userId))) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     // for admin fetch all shipped orders
@@ -34,6 +38,9 @@ export async function PATCH(request) {
     const { userId } = getAuth(request);
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!(await authAdmin(userId))) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const { orderId, status } = await request.json();
