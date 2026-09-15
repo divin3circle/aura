@@ -9,6 +9,8 @@ export async function POST(request) {
   try {
     const body = await request.json();
     const cb = body?.Body?.stkCallback;
+    // Instrumentation: Safaricom's exact payload (ResultCode/Desc + CheckoutRequestID).
+    console.log("M-Pesa callback:", JSON.stringify(cb));
     const checkoutRequestId = cb?.CheckoutRequestID;
     const resultCode = cb?.ResultCode;
 

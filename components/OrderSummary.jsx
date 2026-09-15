@@ -10,6 +10,11 @@ import { fetchCart } from "@/lib/features/cart/cartSlice";
 import { formatPrice } from "@/lib/utils";
 import { shippingFor } from "@/lib/pricing";
 
+// Accept a Kenyan Safaricom mobile as 07XXXXXXXX / 01XXXXXXXX (local) or
+// 2547XXXXXXXX / 2541XXXXXXXX (international). Spaces/dashes are ignored.
+const isValidMpesaPhone = (raw) =>
+  /^(?:0[17]\d{8}|254[17]\d{8})$/.test(String(raw || "").replace(/\D/g, ""));
+
 const OrderSummary = ({ totalPrice, items }) => {
   const { user } = useUser();
   const { getToken } = useAuth();
@@ -52,20 +57,24 @@ const OrderSummary = ({ totalPrice, items }) => {
   };
 
   // Poll our status endpoint until the M-Pesa callback marks the order paid (~90s).
-  const pollPaid = async (checkoutRequestId, token) => {
+  // A fresh Clerk token is fetched each iteration — session tokens expire ~60s, so
+  // reusing one token across the whole loop would 401 on the later polls.
+  const pollPaid = async (checkoutRequestId) => {
     for (let i = 0; i < 18; i++) {
       await new Promise((r) => setTimeout(r, 5000));
       try {
+        const token = await getToken();
         const { data } = await axios.get(
           `/api/mpesa/status?checkoutRequestId=${checkoutRequestId}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        if (data.paid) return true;
+        if (data.paid) return { paid: true };
+        if (data.failed) return { paid: false, failed: true, reason: data.reason };
       } catch {
         /* keep polling */
       }
     }
-    return false;
+    return { paid: false };
   };
 
   const handlePlaceOrder = async () => {
@@ -73,6 +82,10 @@ const OrderSummary = ({ totalPrice, items }) => {
     if (!selectedAddress) return toast("Please select an address", { icon: "⚠️" });
     const phone = (mpesaPhone || selectedAddress.phone || "").trim();
     if (!phone) return toast("Enter your M-Pesa phone number", { icon: "⚠️" });
+    if (!isValidMpesaPhone(phone))
+      return toast.error(
+        "Enter a valid Safaricom number (07XXXXXXXX or 2547XXXXXXXX)"
+      );
 
     setPlacing(true);
     try {
@@ -91,11 +104,15 @@ const OrderSummary = ({ totalPrice, items }) => {
       toast.success(
         data.message || "Check your phone and enter your M-Pesa PIN."
       );
-      const paid = await pollPaid(data.checkoutRequestId, token);
-      if (paid) {
+      const result = await pollPaid(data.checkoutRequestId);
+      if (result.paid) {
         toast.success("Payment received!");
         dispatch(fetchCart({ getToken }));
         router.push("/orders");
+      } else if (result.failed) {
+        toast.error(
+          result.reason || "Payment was cancelled or failed. Please try again."
+        );
       } else {
         toast(
           "Payment not confirmed yet. If you completed it, your order will show under Orders shortly.",
