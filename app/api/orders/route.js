@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { applyMargin, shippingFor } from "@/lib/pricing";
 import { activePricing, variantLabel } from "@/lib/variants";
 import { initiateStkPush } from "@/lib/mpesa";
+import { ensureUser } from "@/lib/ensureUser";
 
 export async function POST(request) {
   try {
@@ -14,6 +15,10 @@ export async function POST(request) {
         { status: 401 }
       );
     }
+
+    // Safety net: guarantee a DB User row exists before creating FK-bound orders,
+    // even if the Inngest clerk/user.created sync hasn't run for this signup yet.
+    await ensureUser(userId);
 
     const { addressId, items, couponCode, paymentMethod, phone } =
       await request.json();

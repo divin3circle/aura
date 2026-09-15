@@ -1,6 +1,7 @@
 import { getAuth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { ensureUser } from "@/lib/ensureUser";
 
 export async function GET(request) {
   try {
@@ -37,6 +38,7 @@ export async function POST(request) {
       );
     }
 
+    await ensureUser(userId);
     const newAddress = await prisma.address.create({
       data: {
         ...address,
