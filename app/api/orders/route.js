@@ -177,9 +177,16 @@ export async function POST(request) {
     const callbackUrl =
       process.env.MPESA_CALLBACK_URL || `${origin}/api/mpesa/callback`;
 
+    // TEMP DEMO OVERRIDE: if MPESA_DEMO_AMOUNT is set (>0), charge that fixed
+    // amount (e.g. 1) via STK so a real number can complete a live demo without
+    // paying the full price. The order's `total` still records the real amount.
+    // Remove/unset this env var to charge the real total.
+    const demoAmount = Number(process.env.MPESA_DEMO_AMOUNT) || 0;
+    const chargeAmount = demoAmount > 0 ? demoAmount : Math.round(fullAmount);
+
     const stk = await initiateStkPush({
       phone,
-      amount: Math.round(fullAmount),
+      amount: chargeAmount,
       accountRef: "AURA",
       description: "Aura order",
       callbackUrl,
