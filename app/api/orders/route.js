@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { applyMargin, shippingFor } from "@/lib/pricing";
 import { activePricing, variantLabel } from "@/lib/variants";
-import axios from "axios";
+import { initiateStkPush } from "@/lib/mpesa";
 
 export async function POST(request) {
   try {
@@ -15,11 +15,17 @@ export async function POST(request) {
       );
     }
 
-    const { addressId, items, couponCode, paymentMethod } =
+    const { addressId, items, couponCode, paymentMethod, phone } =
       await request.json();
     if (!addressId || !items || !paymentMethod) {
       return NextResponse.json(
         { error: "Missing required parameters" },
+        { status: 400 }
+      );
+    }
+    if (!phone) {
+      return NextResponse.json(
+        { error: "M-Pesa phone number is required" },
         { status: 400 }
       );
     }
@@ -165,34 +171,42 @@ export async function POST(request) {
       orderIds.push(order.id);
     }
 
-    // Initialize a Paystack transaction and hand the client the redirect URL.
-    // The cart is cleared and orders marked paid by the Paystack webhook on charge.success.
-    const buyer = await prisma.user.findUnique({ where: { id: userId } });
+    // Trigger an M-Pesa STK push for the full amount. Orders stay unpaid until the
+    // Safaricom callback (/api/mpesa/callback) confirms; we store CheckoutRequestID to correlate.
     const origin = request.headers.get("origin");
+    const callbackUrl =
+      process.env.MPESA_CALLBACK_URL || `${origin}/api/mpesa/callback`;
 
-    const init = await axios.post(
-      "https://api.paystack.co/transaction/initialize",
-      {
-        email: buyer.email,
-        amount: Math.round(fullAmount * 100), // KES -> subunit (cents)
-        currency: "KES",
-        callback_url: `${origin}/loading?nextUrl=orders`,
-        metadata: {
-          orderIds: orderIds.join(","),
-          userId: userId,
-          appId: "AuraEcom",
-        },
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const stk = await initiateStkPush({
+      phone,
+      amount: Math.round(fullAmount),
+      accountRef: "AURA",
+      description: "Aura order",
+      callbackUrl,
+    });
+
+    if (stk.ResponseCode !== "0") {
+      // The STK request itself failed — roll back the just-created pending orders.
+      await prisma.order.deleteMany({ where: { id: { in: orderIds } } });
+      return NextResponse.json(
+        { error: stk.ResponseDescription || "Failed to start M-Pesa payment" },
+        { status: 400 }
+      );
+    }
+
+    await prisma.order.updateMany({
+      where: { id: { in: orderIds } },
+      data: { mpesaCheckoutRequestId: stk.CheckoutRequestID },
+    });
 
     return NextResponse.json(
-      { url: init.data.data.authorization_url, orderIds },
+      {
+        checkoutRequestId: stk.CheckoutRequestID,
+        orderIds,
+        message:
+          stk.CustomerMessage ||
+          "Check your phone and enter your M-Pesa PIN to complete payment.",
+      },
       { status: 200 }
     );
   } catch (error) {

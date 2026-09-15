@@ -19,11 +19,12 @@ const OrderSummary = ({ totalPrice, items }) => {
 
   const addressList = useSelector((state) => state.address.list);
 
-  const [paymentMethod, setPaymentMethod] = useState("PAYSTACK");
   const [selectedAddress, setSelectedAddress] = useState(null);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [couponCodeInput, setCouponCodeInput] = useState("");
   const [coupon, setCoupon] = useState("");
+  const [mpesaPhone, setMpesaPhone] = useState("");
+  const [placing, setPlacing] = useState(false);
 
   const handleCouponCode = async (event) => {
     event.preventDefault();
@@ -50,33 +51,61 @@ const OrderSummary = ({ totalPrice, items }) => {
     }
   };
 
-  const handlePlaceOrder = async (e) => {
-    e.preventDefault();
+  // Poll our status endpoint until the M-Pesa callback marks the order paid (~90s).
+  const pollPaid = async (checkoutRequestId, token) => {
+    for (let i = 0; i < 18; i++) {
+      await new Promise((r) => setTimeout(r, 5000));
+      try {
+        const { data } = await axios.get(
+          `/api/mpesa/status?checkoutRequestId=${checkoutRequestId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (data.paid) return true;
+      } catch {
+        /* keep polling */
+      }
+    }
+    return false;
+  };
 
+  const handlePlaceOrder = async () => {
+    if (!user) return toast("Please login to place order", { icon: "⚠️" });
+    if (!selectedAddress) return toast("Please select an address", { icon: "⚠️" });
+    const phone = (mpesaPhone || selectedAddress.phone || "").trim();
+    if (!phone) return toast("Enter your M-Pesa phone number", { icon: "⚠️" });
+
+    setPlacing(true);
     try {
-      if (!user) {
-        return toast("Please login to place order", { icon: "⚠️" });
-      }
-      if (!selectedAddress) {
-        return toast("Please select an address", { icon: "⚠️" });
-      }
       const token = await getToken();
-      const orderData = {
-        addressId: selectedAddress.id,
-        items: items,
-        couponCode: coupon ? coupon.code : null,
-        paymentMethod: "PAYSTACK",
-      };
-      const { data } = await axios.post("/api/orders", orderData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const { data } = await axios.post(
+        "/api/orders",
+        {
+          addressId: selectedAddress.id,
+          items,
+          couponCode: coupon ? coupon.code : null,
+          paymentMethod: "MPESA",
+          phone,
         },
-      });
-      // Redirect the customer to Paystack to complete payment (card or M-Pesa).
-      window.location.href = data.url;
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success(
+        data.message || "Check your phone and enter your M-Pesa PIN."
+      );
+      const paid = await pollPaid(data.checkoutRequestId, token);
+      if (paid) {
+        toast.success("Payment received!");
+        dispatch(fetchCart({ getToken }));
+        router.push("/orders");
+      } else {
+        toast(
+          "Payment not confirmed yet. If you completed it, your order will show under Orders shortly.",
+          { icon: "⏳" }
+        );
+      }
     } catch (error) {
-      toast.error("Failed to place order");
-      return;
+      toast.error(error.response?.data?.error || "Failed to place order");
+    } finally {
+      setPlacing(false);
     }
   };
 
@@ -90,17 +119,18 @@ const OrderSummary = ({ totalPrice, items }) => {
       <h2 className="text-xl font-medium text-slate-600">Payment Summary</h2>
       <p className="text-slate-400 text-xs my-4">Payment Method</p>
       <div className="flex gap-2 items-center">
-        <input
-          type="radio"
-          id="PAYSTACK"
-          checked
-          readOnly
-          className="accent-gray-500"
-        />
-        <label htmlFor="PAYSTACK" className="cursor-pointer">
-          Pay with Paystack — card or M-Pesa
+        <input type="radio" id="MPESA" checked readOnly className="accent-green-600" />
+        <label htmlFor="MPESA" className="cursor-pointer">
+          Pay with M-Pesa
         </label>
       </div>
+      <input
+        type="tel"
+        value={mpesaPhone}
+        onChange={(e) => setMpesaPhone(e.target.value)}
+        placeholder={selectedAddress?.phone ? `M-Pesa no. (default ${selectedAddress.phone})` : "M-Pesa no. e.g. 0712 345 678"}
+        className="mt-2 w-full border border-slate-300 rounded p-2 text-sm outline-none"
+      />
       <div className="my-4 py-4 border-y border-slate-200 text-slate-400">
         <p>Address</p>
         {selectedAddress ? (
@@ -203,13 +233,17 @@ const OrderSummary = ({ totalPrice, items }) => {
         <p className="font-medium text-right">{formatPrice(orderTotal)}</p>
       </div>
       <button
-        onClick={(e) =>
-          toast.promise(handlePlaceOrder(e), { loading: "Placing Order..." })
-        }
-        className="w-full bg-slate-700 text-white py-2.5 rounded hover:bg-slate-900 active:scale-95 transition-all"
+        onClick={handlePlaceOrder}
+        disabled={placing}
+        className="w-full bg-slate-700 text-white py-2.5 rounded hover:bg-slate-900 active:scale-95 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        Place Order
+        {placing ? "Waiting for M-Pesa…" : "Place Order"}
       </button>
+      {placing && (
+        <p className="text-xs text-slate-500 text-center mt-2">
+          Check your phone and enter your M-Pesa PIN. Don't close this page.
+        </p>
+      )}
 
       {showAddressModal && (
         <AddressModal setShowAddressModal={setShowAddressModal} />

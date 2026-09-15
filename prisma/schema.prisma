@@ -79,8 +79,9 @@ enum OrderStatus {
 }
 
 enum PaymentMethod {
-    PAYSTACK
+    MPESA
     // Legacy — retained only for historical orders; no longer offered at checkout.
+    PAYSTACK
     COD
     STRIPE
 }
@@ -99,6 +100,7 @@ model Order {
     updatedAt     DateTime      @updatedAt
     isCouponUsed  Boolean       @default(false)
     coupon        Json          @default("{}")
+    mpesaCheckoutRequestId String? // correlates the M-Pesa STK callback to this order
     orderItems    OrderItem[]
 
     // Relations
