@@ -14,19 +14,29 @@ export async function POST(request) {
     const checkoutRequestId = cb?.CheckoutRequestID;
     const resultCode = cb?.ResultCode;
 
-    if (checkoutRequestId && Number(resultCode) === 0) {
+    if (checkoutRequestId != null) {
       const orders = await prisma.order.findMany({
         where: { mpesaCheckoutRequestId: checkoutRequestId },
       });
       if (orders.length > 0) {
+        const paid = Number(resultCode) === 0;
+        // Record the outcome on every callback (success OR failure) so the
+        // checkout page can stop polling early and tell the user what happened
+        // (1032 cancelled, 1037 timeout, …) instead of waiting the full window.
         await prisma.order.updateMany({
           where: { mpesaCheckoutRequestId: checkoutRequestId },
-          data: { isPaid: true },
+          data: {
+            isPaid: paid,
+            mpesaResultCode: resultCode != null ? Number(resultCode) : null,
+            mpesaResultDesc: cb?.ResultDesc || null,
+          },
         });
-        await prisma.user.update({
-          where: { id: orders[0].userId },
-          data: { cart: { cartItems: {}, total: 0 } },
-        });
+        if (paid) {
+          await prisma.user.update({
+            where: { id: orders[0].userId },
+            data: { cart: { cartItems: {}, total: 0 } },
+          });
+        }
       }
     }
 

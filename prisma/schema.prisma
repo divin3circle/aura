@@ -101,6 +101,8 @@ model Order {
     isCouponUsed  Boolean       @default(false)
     coupon        Json          @default("{}")
     mpesaCheckoutRequestId String? // correlates the M-Pesa STK callback to this order
+    mpesaResultCode        Int?    // Daraja callback ResultCode (0 = paid; 1032 cancelled, 1037 timeout, …)
+    mpesaResultDesc        String? // human-readable ResultDesc from the callback
     orderItems    OrderItem[]
 
     // Relations
