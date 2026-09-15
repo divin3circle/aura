@@ -4,6 +4,7 @@ import Loading from "@/components/Loading";
 import { useAuth } from "@clerk/nextjs";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { formatPrice } from "@/lib/utils";
 
 export default function StoreOrders() {
   const { getToken } = useAuth();
@@ -227,6 +228,26 @@ export default function StoreOrders() {
                 <span className="text-green-700">Paid:</span>{" "}
                 {selectedOrder.isPaid ? "Yes" : "No"}
               </p>
+              {selectedOrder.mpesaReceipt && (
+                <p>
+                  <span className="text-green-700">M-Pesa Receipt:</span>{" "}
+                  <span className="font-mono font-medium text-slate-900">
+                    {selectedOrder.mpesaReceipt}
+                  </span>
+                </p>
+              )}
+              {selectedOrder.mpesaPhone && (
+                <p>
+                  <span className="text-green-700">Paid By:</span>{" "}
+                  {selectedOrder.mpesaPhone}
+                </p>
+              )}
+              {selectedOrder.mpesaAmount != null && (
+                <p>
+                  <span className="text-green-700">Amount Paid:</span>{" "}
+                  {formatPrice(selectedOrder.mpesaAmount)}
+                </p>
+              )}
               {selectedOrder.isCouponUsed && (
                 <p>
                   <span className="text-green-700">Coupon:</span>{" "}
