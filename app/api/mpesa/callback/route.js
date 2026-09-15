@@ -20,6 +20,13 @@ export async function POST(request) {
       });
       if (orders.length > 0) {
         const paid = Number(resultCode) === 0;
+
+        // On success, Safaricom includes CallbackMetadata with the receipt/phone/amount.
+        const meta = {};
+        for (const item of cb?.CallbackMetadata?.Item || []) {
+          if (item?.Name) meta[item.Name] = item.Value;
+        }
+
         // Record the outcome on every callback (success OR failure) so the
         // checkout page can stop polling early and tell the user what happened
         // (1032 cancelled, 1037 timeout, …) instead of waiting the full window.
@@ -29,6 +36,9 @@ export async function POST(request) {
             isPaid: paid,
             mpesaResultCode: resultCode != null ? Number(resultCode) : null,
             mpesaResultDesc: cb?.ResultDesc || null,
+            mpesaReceipt: paid ? meta.MpesaReceiptNumber ?? null : null,
+            mpesaPhone: paid && meta.PhoneNumber != null ? String(meta.PhoneNumber) : null,
+            mpesaAmount: paid && meta.Amount != null ? Number(meta.Amount) : null,
           },
         });
         if (paid) {

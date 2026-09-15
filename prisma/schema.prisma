@@ -103,6 +103,9 @@ model Order {
     mpesaCheckoutRequestId String? // correlates the M-Pesa STK callback to this order
     mpesaResultCode        Int?    // Daraja callback ResultCode (0 = paid; 1032 cancelled, 1037 timeout, …)
     mpesaResultDesc        String? // human-readable ResultDesc from the callback
+    mpesaReceipt           String? // M-Pesa receipt no. (CallbackMetadata) on a successful charge
+    mpesaPhone             String? // payer phone from the callback metadata
+    mpesaAmount            Float?  // amount actually charged, per the callback metadata
     orderItems    OrderItem[]
 
     // Relations
