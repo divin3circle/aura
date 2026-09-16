@@ -30,10 +30,12 @@ export default function PublicLayout({ children }) {
   }, [user]);
 
   useEffect(() => {
-    if (cartItems) {
+    // Only sync the cart to the server for signed-in users; otherwise the
+    // POST /api/cart 401s on every cart change for logged-out visitors.
+    if (user && cartItems) {
       dispatch(updateCart({ getToken }));
     }
-  }, [cartItems]);
+  }, [cartItems, user]);
 
   return (
     <>

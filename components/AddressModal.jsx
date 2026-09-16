@@ -37,6 +37,10 @@ const AddressModal = ({ setShowAddressModal }) => {
     try {
       setLoading(true);
       const token = await getToken();
+      if (!token) {
+        setLoading(false);
+        return toast.error("Please sign in to save an address");
+      }
       const { data } = await axios.post(
         "/api/address",
         { address },
@@ -52,7 +56,16 @@ const AddressModal = ({ setShowAddressModal }) => {
       setLoading(false);
       setShowAddressModal(false);
     } catch (error) {
-      toast.error(error.response?.data || "Failed to add address");
+      // Always render a string — the API's error body is an object
+      // ({ error: "Unauthorized" }), and passing it to toast crashes React.
+      const message =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        (typeof error.response?.data === "string"
+          ? error.response.data
+          : error.message) ||
+        "Failed to add address";
+      toast.error(message);
       setLoading(false);
     }
   };

@@ -182,7 +182,13 @@ const OrderSummary = ({ totalPrice, items }) => {
             )}
             <button
               className="flex items-center gap-1 text-slate-600 mt-1"
-              onClick={() => setShowAddressModal(true)}
+              onClick={() => {
+                if (!user)
+                  return toast("Please login to add an address", {
+                    icon: "⚠️",
+                  });
+                setShowAddressModal(true);
+              }}
             >
               Add Address <PlusIcon size={18} />
             </button>
